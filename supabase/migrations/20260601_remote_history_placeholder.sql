@@ -1,0 +1,5 @@
+-- Placeholder para alinhar o histórico local com uma migration já registrada
+-- no projeto Supabase dev como versão 20260601.
+--
+-- Não altera schema. Mantém o repositório compatível com o histórico remoto
+-- para permitir que migrations posteriores sejam avaliadas pelo CLI.

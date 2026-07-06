@@ -1,0 +1,90 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Gradle
+android/.gradle/
+
+# Claude Code temp files
+.claude/
+tmpclaude-*
+nul
+
+# Playwright MCP logs
+.playwright-mcp/
+
+# OS files
+Thumbs.db
+*.swp
+*~
+
+# Environment / secrets
+.env
+.env.*
+supabase.env
+
+# Firebase / Google Services (manter local, não subir)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
+# Supabase secrets (manter local, não subir)
+lib/core/config/_secrets.dart
+
+# Supabase CLI temp/local (migrations e schema.sql ficam trackeados)
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Android signing
+android/key.properties
+android/app/upload-keystore.jks
+*.jks
+*.keystore
+
+# Apresentações / binários grandes
+*.pptx
+
+# Screenshots soltos
+/image*.png
