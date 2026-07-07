@@ -3,18 +3,22 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/payment/infinitypay/infinitypay_checkout_service.dart';
+import '../../../../core/payment/infinitypay/infinitypay_models.dart';
 import '../../../../core/payment/payment_gateway.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../subscription/domain/usecases/activate_subscription_usecase.dart';
 import '../../data/datasources/plans_supabase_datasource.dart';
+import 'infinitypay_pending_page.dart';
 import '../widgets/payment_method_item.dart';
 import '../widgets/payment_summary_sheet.dart';
 import '../widgets/terms_bottom_sheet.dart';
 
-enum PaymentMethod { creditCard, pix }
+enum PaymentMethod { creditCard, pix, infinityPay }
 
 /// Página de pagamento — Cartão de Crédito ou Pix.
 /// Persiste o resultado real em `payments` e ativa `subscriptions` ao aprovar.
@@ -41,8 +45,18 @@ class _PaymentPageState extends State<PaymentPage> {
   final _pixNameController = TextEditingController();
   final _pixCpfController = TextEditingController();
 
-  double get _fee => 4.99;
+  double get _fee => _selectedMethod == PaymentMethod.infinityPay ? 0 : 4.99;
   double get _total => widget.selectedPlan.price + _fee;
+  String get _paymentMethodLabel {
+    switch (_selectedMethod) {
+      case PaymentMethod.creditCard:
+        return 'Cartão de Crédito';
+      case PaymentMethod.pix:
+        return 'Pix';
+      case PaymentMethod.infinityPay:
+        return 'Cartão via InfinitePay';
+    }
+  }
 
   @override
   void dispose() {
@@ -67,9 +81,7 @@ class _PaymentPageState extends State<PaymentPage> {
       isScrollControlled: true,
       builder: (_) => PaymentSummarySheet(
         planName: widget.selectedPlan.subscriptionType.displayName,
-        paymentMethod: _selectedMethod == PaymentMethod.creditCard
-            ? 'Cartão de Crédito'
-            : 'Pix',
+        paymentMethod: _paymentMethodLabel,
         fee: _fee,
         total: _total,
         onConfirm: () {
@@ -82,6 +94,11 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Future<void> _processPayment() async {
+    if (_selectedMethod == PaymentMethod.infinityPay) {
+      await _startInfinityPayCheckout();
+      return;
+    }
+
     setState(() => _processing = true);
 
     final gateway = sl<PaymentGateway>();
@@ -137,6 +154,122 @@ class _PaymentPageState extends State<PaymentPage> {
     } finally {
       if (mounted) setState(() => _processing = false);
     }
+  }
+
+  Future<void> _startInfinityPayCheckout() async {
+    setState(() => _processing = true);
+
+    try {
+      final service = sl<InfinityPayCheckoutService>();
+      final appConfig = sl<AppConfig>();
+      if (service.handle.trim().isEmpty) {
+        _showErrorDialog(
+          'INFINITYPAY_HANDLE não configurado para este ambiente.',
+        );
+        return;
+      }
+
+      final orderNsu = _buildOrderNsu();
+      final amountCents = _priceInCents(widget.selectedPlan.price);
+      await _createInfinityPayIntent(
+        orderNsu: orderNsu,
+        amountCents: amountCents,
+      );
+
+      final response = await service.createCheckoutLink(
+        InfinityPayCreateLinkRequest(
+          handle: service.handle,
+          orderNsu: orderNsu,
+          redirectUrl: appConfig.infinityPayRedirectUrl,
+          webhookUrl: appConfig.resolvedInfinityPayWebhookUrl.isEmpty
+              ? null
+              : appConfig.resolvedInfinityPayWebhookUrl,
+          items: [
+            InfinityPayItem(
+              description: 'Vitta Assinatura',
+              quantity: 1,
+              price: amountCents,
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (response.checkoutUrl.isEmpty) {
+        _showErrorDialog('A InfinitePay não retornou o link de pagamento.');
+        return;
+      }
+
+      await _updateInfinityPayIntentCheckoutUrl(
+        orderNsu: orderNsu,
+        checkoutUrl: response.checkoutUrl,
+        slug: response.slug,
+      );
+
+      if (!mounted) return;
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => InfinityPayPendingPage(
+            checkoutUrl: response.checkoutUrl,
+            orderNsu: orderNsu,
+            selectedPlan: widget.selectedPlan,
+            initialSlug: response.slug,
+          ),
+        ),
+      );
+    } on InfinityPayCheckoutException catch (e) {
+      if (!mounted) return;
+      _showErrorDialog(e.message);
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorDialog('Erro ao iniciar checkout InfinitePay: $e');
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
+  }
+
+  String _buildOrderNsu() {
+    final userId = SupabaseConfig.client.auth.currentUser?.id ?? 'guest';
+    final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
+    return 'vitta_${userId}_$timestamp';
+  }
+
+  int _priceInCents(double value) => (value * 100).round();
+
+  Future<void> _createInfinityPayIntent({
+    required String orderNsu,
+    required int amountCents,
+  }) async {
+    final supabase = SupabaseConfig.client;
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('Nenhum usuário autenticado para criar pagamento.');
+    }
+
+    await supabase.from('payment_intents').insert({
+      'user_id': userId,
+      'plan_id': widget.selectedPlan.id,
+      'provider': 'infinitypay',
+      'order_nsu': orderNsu,
+      'amount': widget.selectedPlan.price,
+      'amount_cents': amountCents,
+      'currency': 'BRL',
+      'status': 'pending',
+    });
+  }
+
+  Future<void> _updateInfinityPayIntentCheckoutUrl({
+    required String orderNsu,
+    required String checkoutUrl,
+    String? slug,
+  }) async {
+    await SupabaseConfig.client.from('payment_intents').update({
+      'checkout_url': checkoutUrl,
+      if (slug != null) 'slug': slug,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('order_nsu', orderNsu);
   }
 
   Future<void> _recordPayment({
@@ -227,8 +360,8 @@ class _PaymentPageState extends State<PaymentPage> {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppTheme.gradientLight.withOpacity(0.3),
-                      Colors.white.withOpacity(0),
+                      AppTheme.gradientLight.withValues(alpha: 0.3),
+                      Colors.white.withValues(alpha: 0),
                     ],
                     stops: const [0, 1],
                   ),
@@ -247,7 +380,8 @@ class _PaymentPageState extends State<PaymentPage> {
                           width: 39,
                           height: 39,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF01225B).withOpacity(0.2),
+                            color:
+                                const Color(0xFF01225B).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(19.5),
                           ),
                           child: const Icon(
@@ -342,8 +476,8 @@ class _PaymentPageState extends State<PaymentPage> {
           _buildSummaryRow('Plano',
               'R\$ ${widget.selectedPlan.price.toStringAsFixed(2).replaceAll('.', ',')}'),
           const SizedBox(height: 10),
-          _buildSummaryRow('Taxa',
-              'R\$ ${_fee.toStringAsFixed(2).replaceAll('.', ',')}'),
+          _buildSummaryRow(
+              'Taxa', 'R\$ ${_fee.toStringAsFixed(2).replaceAll('.', ',')}'),
           const SizedBox(height: 10),
           _buildSummaryRow(
             'Total',
@@ -355,7 +489,8 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool highlight = false}) {
+  Widget _buildSummaryRow(String label, String value,
+      {bool highlight = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -406,6 +541,14 @@ class _PaymentPageState extends State<PaymentPage> {
           isSelected: _selectedMethod == PaymentMethod.pix,
           onTap: () => setState(() => _selectedMethod = PaymentMethod.pix),
           trailing: _buildPixIcon(),
+        ),
+        const SizedBox(height: 6),
+        PaymentMethodItem(
+          title: 'Cartão via InfinitePay',
+          isSelected: _selectedMethod == PaymentMethod.infinityPay,
+          onTap: () =>
+              setState(() => _selectedMethod = PaymentMethod.infinityPay),
+          trailing: _buildInfinityPayIcon(),
         ),
       ],
     );
@@ -461,7 +604,7 @@ class _PaymentPageState extends State<PaymentPage> {
                     width: 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF79E1B).withOpacity(0.8),
+                      color: const Color(0xFFF79E1B).withValues(alpha: 0.8),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -482,6 +625,14 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
+  Widget _buildInfinityPayIcon() {
+    return const Icon(
+      Icons.open_in_new_rounded,
+      color: AppTheme.primaryColor,
+      size: 22,
+    );
+  }
+
   Widget _buildPaymentForm() {
     return Container(
       width: double.infinity,
@@ -491,9 +642,11 @@ class _PaymentPageState extends State<PaymentPage> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFEBEEF2)),
       ),
-      child: _selectedMethod == PaymentMethod.creditCard
-          ? _buildCreditCardForm()
-          : _buildPixForm(),
+      child: switch (_selectedMethod) {
+        PaymentMethod.creditCard => _buildCreditCardForm(),
+        PaymentMethod.pix => _buildPixForm(),
+        PaymentMethod.infinityPay => _buildInfinityPayForm(),
+      },
     );
   }
 
@@ -578,6 +731,32 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
+  Widget _buildInfinityPayForm() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.lock_outline_rounded,
+          color: AppTheme.primaryColor,
+          size: 20,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Você será direcionado para o checkout seguro da InfinitePay para '
+            'pagar com cartão ou carteira digital.',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF6D7F95),
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFormField({
     required String label,
     required String hint,
@@ -617,7 +796,7 @@ class _PaymentPageState extends State<PaymentPage> {
               hintStyle: GoogleFonts.outfit(
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFF6D7F95).withOpacity(0.5),
+                color: const Color(0xFF6D7F95).withValues(alpha: 0.5),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,

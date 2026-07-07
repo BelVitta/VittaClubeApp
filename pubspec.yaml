@@ -51,12 +51,14 @@ dependencies:
   google_sign_in: ^6.2.1
   intl: ^0.19.0               # Internacionalização e formatação de datas
   qr_flutter: ^4.1.0           # Geração de QR Code
-  mobile_scanner: ^6.0.2       # Leitura de QR Code via câmera
+  mobile_scanner: ^7.0.0       # Leitura de QR Code via câmera
   crypto: ^3.0.3               # SHA-256 para algoritmo de sorteio transparente
   supabase_flutter: ^2.8.3     # Backend principal (banco, auth, storage)
   flutter_svg: ^2.0.17         # Renderiza SVGs do assets/icons/
   shimmer: ^3.0.0              # Skeleton loading nas telas
   url_launcher: ^6.3.1         # Abrir WhatsApp, telefone, e-mail etc.
+  app_links: 6.4.1              # Receber retorno do checkout InfinitePay
+  http: 1.6.0                  # Cliente HTTP usado no checkout InfinitePay
 
 dev_dependencies:
   flutter_test:

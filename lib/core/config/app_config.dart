@@ -7,6 +7,9 @@ class AppConfig {
   final String appName;
   final String supabaseUrl;
   final String supabaseAnonKey;
+  final String infinityPayHandle;
+  final String infinityPayRedirectUrl;
+  final String infinityPayWebhookUrl;
   final bool useMockData;
 
   AppConfig._({
@@ -14,6 +17,9 @@ class AppConfig {
     required this.appName,
     required this.supabaseUrl,
     required this.supabaseAnonKey,
+    required this.infinityPayHandle,
+    required this.infinityPayRedirectUrl,
+    required this.infinityPayWebhookUrl,
     required this.useMockData,
   });
 
@@ -38,6 +44,18 @@ class AppConfig {
       appName: 'Vita Clube Dev',
       supabaseUrl: '',
       supabaseAnonKey: '',
+      infinityPayHandle: const String.fromEnvironment(
+        'INFINITYPAY_HANDLE',
+        defaultValue: 'vinicius-belchior-car',
+      ),
+      infinityPayRedirectUrl: const String.fromEnvironment(
+        'INFINITYPAY_REDIRECT_URL',
+        defaultValue: 'vittaclube://payment/infinitypay/return',
+      ),
+      infinityPayWebhookUrl: const String.fromEnvironment(
+        'INFINITYPAY_WEBHOOK_URL',
+        defaultValue: '',
+      ),
       useMockData: true,
     );
   }
@@ -57,6 +75,18 @@ class AppConfig {
         'SUPABASE_ANON_KEY',
         defaultValue: kSupabaseAnonKeyDefault,
       ),
+      infinityPayHandle: const String.fromEnvironment(
+        'INFINITYPAY_HANDLE',
+        defaultValue: 'vinicius-belchior-car',
+      ),
+      infinityPayRedirectUrl: const String.fromEnvironment(
+        'INFINITYPAY_REDIRECT_URL',
+        defaultValue: 'vittaclube://payment/infinitypay/return',
+      ),
+      infinityPayWebhookUrl: const String.fromEnvironment(
+        'INFINITYPAY_WEBHOOK_URL',
+        defaultValue: '',
+      ),
       useMockData: false,
     );
   }
@@ -74,6 +104,18 @@ class AppConfig {
         'SUPABASE_ANON_KEY',
         defaultValue: kSupabaseAnonKeyDefault,
       ),
+      infinityPayHandle: const String.fromEnvironment(
+        'INFINITYPAY_HANDLE',
+        defaultValue: 'vinicius-belchior-car',
+      ),
+      infinityPayRedirectUrl: const String.fromEnvironment(
+        'INFINITYPAY_REDIRECT_URL',
+        defaultValue: 'vittaclube://payment/infinitypay/return',
+      ),
+      infinityPayWebhookUrl: const String.fromEnvironment(
+        'INFINITYPAY_WEBHOOK_URL',
+        defaultValue: '',
+      ),
       useMockData: false,
     );
   }
@@ -84,4 +126,10 @@ class AppConfig {
 
   /// Se deve conectar ao Supabase (staging e prod)
   bool get useSupabase => !useMockData && supabaseUrl.isNotEmpty;
+
+  String get resolvedInfinityPayWebhookUrl {
+    if (infinityPayWebhookUrl.isNotEmpty) return infinityPayWebhookUrl;
+    if (supabaseUrl.isEmpty) return '';
+    return '$supabaseUrl/functions/v1/infinitypay-webhook';
+  }
 }

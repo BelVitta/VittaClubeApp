@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../config/supabase_config.dart';
+import '../payment/infinitypay/infinitypay_checkout_service.dart';
 import '../payment/payment_gateway.dart';
 import '../payment/mock_payment_gateway.dart';
 import '../services/clinic_settings_service.dart';
@@ -176,6 +177,7 @@ import '../../features/consultation/data/datasources/consultation_supabase_datas
 import '../../features/consultation/data/repositories/consultation_repository_impl.dart';
 import '../../features/consultation/domain/repositories/consultation_repository.dart';
 import '../../features/consultation/domain/usecases/get_user_consultations_usecase.dart';
+import '../../features/consultation/domain/usecases/record_consultation_usecase.dart';
 import '../../features/consultation/presentation/bloc/consultation_bloc.dart';
 
 // Profile (perfil do usuário logado)
@@ -194,6 +196,9 @@ import '../../features/subscription/data/repositories/subscription_repository_im
 import '../../features/subscription/domain/repositories/subscription_repository.dart';
 import '../../features/subscription/domain/usecases/get_current_subscription_usecase.dart';
 import '../../features/subscription/domain/usecases/activate_subscription_usecase.dart';
+import '../../features/subscription/domain/usecases/cancel_subscription_usecase.dart';
+import '../../features/subscription/domain/usecases/create_pix_automatic_subscription_usecase.dart';
+import '../../features/subscription/domain/usecases/refresh_subscription_status_usecase.dart';
 import '../../features/subscription/presentation/bloc/subscription_bloc.dart';
 
 // Admin - BLoCs
@@ -226,7 +231,15 @@ Future<void> init() async {
   );
 
   // Config service — lê/escreve configurações globais da clínica (ex: WhatsApp).
-  sl.registerLazySingleton<ClinicSettingsService>(() => ClinicSettingsService());
+  sl.registerLazySingleton<ClinicSettingsService>(
+    () => ClinicSettingsService(),
+  );
+
+  sl.registerLazySingleton<InfinityPayCheckoutService>(
+    () => InfinityPayCheckoutService(
+      handle: AppConfig.instance.infinityPayHandle,
+    ),
+  );
 
   //============================================================
   // Features - Auth
@@ -488,6 +501,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => GetUserConsultationsUseCase(sl()));
+  sl.registerLazySingleton(() => RecordConsultationUseCase(sl()));
 
   sl.registerLazySingleton<ConsultationRepository>(
     () => ConsultationRepositoryImpl(dataSource: sl()),
@@ -525,6 +539,9 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => GetCurrentSubscriptionUseCase(sl()));
   sl.registerLazySingleton(() => ActivateSubscriptionUseCase(sl()));
+  sl.registerLazySingleton(() => CancelSubscriptionUseCase(sl()));
+  sl.registerLazySingleton(() => CreatePixAutomaticSubscriptionUseCase(sl()));
+  sl.registerLazySingleton(() => RefreshSubscriptionStatusUseCase(sl()));
 
   sl.registerLazySingleton<SubscriptionRepository>(
     () => SubscriptionRepositoryImpl(dataSource: sl()),

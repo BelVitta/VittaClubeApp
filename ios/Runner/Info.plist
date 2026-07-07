@@ -55,6 +55,16 @@
 				<string>com.googleusercontent.apps.538839527074-mnj5bjsb1uoisggi8sucrn2f4l8shsk9</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>br.com.vittaclube.payment</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>vittaclube</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>
