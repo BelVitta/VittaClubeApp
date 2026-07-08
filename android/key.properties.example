@@ -1,0 +1,4 @@
+storePassword=change-me
+keyPassword=change-me
+keyAlias=vittaclube
+storeFile=upload-keystore.jks

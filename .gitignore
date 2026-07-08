@@ -87,3 +87,6 @@ android/app/upload-keystore.jks
 
 # Screenshots soltos
 /image*.png
+
+# Segredos locais — nunca commitar
+supabase.env

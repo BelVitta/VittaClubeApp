@@ -1,0 +1,22 @@
+-- Contract test notes for Supabase CLI/pgtap environments.
+-- Expected guarantees:
+-- 1. authenticated users can read only rows from public.subscriptions where
+--    subscriptions.user_id = auth.uid().
+-- 2. authenticated users cannot read public.woovi_webhook_events directly.
+-- 3. authenticated users can read/update only their own billing_profiles row.
+-- 4. authenticated users can request refunds only for their own paid charge,
+--    within 7 days, and only when no usage_records row exists in the period.
+-- 5. admins/financeiro can review subscription_refund_requests; ordinary users
+--    can only view their own requests.
+-- 6. service_role is the only role used by Edge Functions to write
+--    subscriptions, charges, attempts, webhook events, and access events.
+-- 7. login/splash route by public.profiles.role: user, admin, financeiro,
+--    parceiro.
+-- 8. financeiro inherits admin operational access through is_admin(), but
+--    role changes in public.profiles are rejected for non-financeiro actors.
+-- 9. admin can view/update operational user data, but cannot promote/demote
+--    roles or delete profiles.
+--
+-- This file is intentionally declarative because the project has no pgtap
+-- harness configured yet. Convert these assertions to executable pgtap tests
+-- when `supabase test db` is introduced.
