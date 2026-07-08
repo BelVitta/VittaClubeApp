@@ -35,3 +35,10 @@ class ValidationFailure extends Failure {
 class AuthFailure extends Failure {
   const AuthFailure([super.message = 'Erro de autenticação.']);
 }
+
+/// Falha de serviço indisponível (ex: Supabase pausado)
+class ServiceUnavailableFailure extends Failure {
+  const ServiceUnavailableFailure(
+      [super.message =
+          'Serviço temporariamente indisponível. Tente novamente em alguns minutos.']);
+}

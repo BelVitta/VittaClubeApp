@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
+import '../../../../shared/widgets/app_navigation.dart';
 import '../../../../shared/widgets/skeleton_box.dart';
 import '../../../badge_progress/presentation/bloc/badge_progress_bloc.dart';
 import '../../../badge_progress/presentation/bloc/badge_progress_event.dart';
@@ -25,12 +27,11 @@ import '../widgets/badge_detail_sheet.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/empty_consultation_state.dart';
 import '../widgets/consultation_history_item.dart';
-import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../plans/data/datasources/plans_supabase_datasource.dart';
+import '../../../plans/presentation/pages/payment_page.dart';
 import '../../../plans/presentation/pages/plans_page.dart';
 import '../../../benefits/presentation/pages/benefits_page.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
-import '../../../card/presentation/pages/card_page.dart';
-import '../../../professionals/presentation/pages/professionals_page.dart';
 import '../../../payments/presentation/pages/payments_page.dart';
 import '../../../parceiro/presentation/pages/user/partners_list_page.dart';
 
@@ -79,7 +80,7 @@ class _HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<_HomeView> {
-  int _currentNavIndex = 0;
+  final int _currentNavIndex = 0;
 
   static const IconData _beneficiosIcon = Icons.star_rounded;
   static const IconData _pagarIcon = Icons.payment_outlined;
@@ -88,10 +89,28 @@ class _HomeViewState extends State<_HomeView> {
   static const IconData _consultationBadgeIcon =
       Icons.medical_services_outlined;
 
+  late final Future<List<RemotePlan>> _plansFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _plansFuture = sl<PlansSupabaseDataSource>().getActivePlans();
+  }
+
   void _goToPlans() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const PlansPage()),
+    ).then((_) {
+      if (!mounted) return;
+      context.read<SubscriptionBloc>().add(const LoadCurrentSubscription());
+    });
+  }
+
+  void _goToPayment(RemotePlan plan) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PaymentPage(selectedPlan: plan)),
     ).then((_) {
       if (!mounted) return;
       context.read<SubscriptionBloc>().add(const LoadCurrentSubscription());
@@ -147,34 +166,11 @@ class _HomeViewState extends State<_HomeView> {
                 ),
                 AppBottomNavigation(
                   currentIndex: _currentNavIndex,
-                  onTap: (index) {
-                    setState(() {
-                      _currentNavIndex = index;
-                    });
-                    if (index == 1) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ProfessionalsPage()),
-                      ).then((_) {
-                        setState(() => _currentNavIndex = 0);
-                      });
-                    } else if (index == 2) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const CardPage()),
-                      ).then((_) {
-                        setState(() => _currentNavIndex = 0);
-                      });
-                    } else if (index == 3) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ProfilePage()),
-                      ).then((_) {
-                        setState(() => _currentNavIndex = 0);
-                      });
-                    }
-                  },
+                  onTap: (index) => AppNavigation.goToBottomNavIndex(
+                    context,
+                    index,
+                    currentIndex: _currentNavIndex,
+                  ),
                 ),
               ],
             ),
@@ -262,7 +258,22 @@ class _HomeViewState extends State<_HomeView> {
           );
         }
         if (subState is NoSubscription || subState is SubscriptionError) {
-          return NoPlanCard(onTap: _goToPlans);
+          return FutureBuilder<List<RemotePlan>>(
+            future: _plansFuture,
+            builder: (context, snapshot) {
+              final plans = snapshot.data;
+              if (plans == null || plans.isEmpty) {
+                return NoPlanCard(onTap: _goToPlans);
+              }
+              final cheapest = plans.first;
+              final price = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$')
+                  .format(cheapest.price);
+              return NoPlanCard(
+                priceLabel: '$price/${cheapest.subscriptionType.periodLabel}',
+                onTap: () => _goToPayment(cheapest),
+              );
+            },
+          );
         }
         if (subState is SubscriptionLoaded) {
           final level = subState.subscription.level;

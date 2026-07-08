@@ -42,6 +42,7 @@ supabase functions deploy woovi-webhook
 supabase functions deploy reconcile-woovi-subscription
 supabase functions deploy cancel-woovi-subscription
 supabase functions deploy infinitypay-webhook --no-verify-jwt
+supabase functions deploy infinitypay-return --no-verify-jwt
 
 echo "Migration status after push"
 supabase migration list

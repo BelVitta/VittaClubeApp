@@ -46,7 +46,7 @@ class ConsultationHistoryItem extends StatelessWidget {
                     width: 25,
                     height: 25,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4678CF).withOpacity(0.09),
+                      color: const Color(0xFF4678CF).withValues(alpha: 0.09),
                       borderRadius: BorderRadius.circular(12.5),
                     ),
                     child: Icon(
@@ -77,7 +77,7 @@ class ConsultationHistoryItem extends StatelessWidget {
                           style: GoogleFonts.outfit(
                             fontSize: 10,
                             fontWeight: FontWeight.w400,
-                            color: AppTheme.primaryColor.withOpacity(0.4),
+                            color: AppTheme.primaryColor.withValues(alpha: 0.4),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -95,7 +95,7 @@ class ConsultationHistoryItem extends StatelessWidget {
               style: GoogleFonts.outfit(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.primaryColor.withOpacity(0.4),
+                color: AppTheme.primaryColor.withValues(alpha: 0.4),
               ),
             ),
           ],

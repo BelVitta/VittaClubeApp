@@ -7,8 +7,6 @@ import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_datasource.dart';
 import '../services/auth_session_manager.dart';
 
-/// Implementação do repositório de autenticação.
-/// Faz a ponte entre Domain e Data layers.
 class AuthRepositoryImpl implements AuthRepository {
   final AuthDataSource dataSource;
   final AuthSessionManager authSessionManager;
@@ -27,6 +25,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = await dataSource.login(email: email, password: password);
       await authSessionManager.saveSession(user);
       return Right(user);
+    } on ServerUnavailableException {
+      return const Left(ServiceUnavailableFailure());
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } on ServerException catch (e) {
@@ -54,6 +54,8 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       await authSessionManager.saveSession(user);
       return Right(user);
+    } on ServerUnavailableException {
+      return const Left(ServiceUnavailableFailure());
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } on ServerException catch (e) {
@@ -69,6 +71,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = await dataSource.signInWithGoogle();
       await authSessionManager.saveSession(user);
       return Right(user);
+    } on ServerUnavailableException {
+      return const Left(ServiceUnavailableFailure());
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } on ServerException catch (e) {

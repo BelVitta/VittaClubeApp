@@ -1,156 +1,161 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
+import '../../../../shared/widgets/app_navigation.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../consultation/presentation/bloc/consultation_bloc.dart';
+import '../../../consultation/presentation/bloc/consultation_event.dart';
+import '../../../consultation/presentation/bloc/consultation_state.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
-import '../../../profile/presentation/pages/profile_page.dart';
-import '../../../professionals/presentation/pages/professionals_page.dart';
+import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../profile/presentation/bloc/profile_event.dart';
+import '../../../profile/presentation/bloc/profile_state.dart';
+import '../../../subscription/domain/entities/subscription_entity.dart';
+import '../../../subscription/presentation/widgets/restore_account_modal.dart';
 import '../widgets/qr_code_sheet.dart';
 import '../widgets/transaction_item.dart';
 
 /// Página da Carteirinha Digital VitaClube.
 class CardPage extends StatefulWidget {
-  const CardPage({super.key});
+  final SubscriptionEntity? subscription;
+
+  const CardPage({super.key, this.subscription});
 
   @override
   State<CardPage> createState() => _CardPageState();
 }
 
 class _CardPageState extends State<CardPage> {
-  // TODO: substituir por ProfileBloc / subscription do usuário.
-  static const String _memberName = 'Diana Santos';
-  static const String _memberCode = '53465123';
+  final int _currentNavIndex = 2;
 
-  int _currentNavIndex = 2;
-
-  final List<_Transaction> _transactions = const [
-    _Transaction(
-      title: 'Lab Vita Saúde',
-      subtitle: 'Exames laboratoriais',
-      valueText: '-R\$ 120,00',
-    ),
-    _Transaction(
-      title: 'Clínica Bem Estar',
-      subtitle: 'Consulta clínica geral',
-      valueText: '-R\$ 80,00',
-    ),
-    _Transaction(
-      title: 'Farmácia Popular',
-      subtitle: '15% de desconto aplicado',
-      valueText: '-R\$ 32,50',
-    ),
-  ];
-
-  void _onNavTap(int index) {
-    setState(() => _currentNavIndex = index);
-    Widget? next;
-    if (index == 0) {
-      Navigator.pop(context);
-      return;
-    } else if (index == 1) {
-      next = const ProfessionalsPage();
-    } else if (index == 3) {
-      next = const ProfilePage();
-    }
-    if (next != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => next!)).then(
-        (_) {
-          if (mounted) setState(() => _currentNavIndex = 2);
-        },
+  void _onNavTap(int index) => AppNavigation.goToBottomNavIndex(
+        context,
+        index,
+        currentIndex: _currentNavIndex,
       );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _circleIconButton(
-                    icon: Icons.arrow_back,
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  Text(
-                    'Carteirinha',
-                    style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  _circleIconButton(
-                    icon: Icons.notifications_outlined,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const NotificationsPage()),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => sl<ProfileBloc>()..add(const LoadCurrentProfile()),
+        ),
+        BlocProvider(
+          create: (_) =>
+              sl<ConsultationBloc>()..add(const LoadUserConsultations()),
+        ),
+      ],
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCard(),
-                    const SizedBox(height: 16),
-                    PrimaryButton(
-                      text: 'Mostrar QR Code',
-                      onPressed: () => QrCodeSheet.show(
-                        context,
-                        memberCode: _memberCode,
-                      ),
+                    _circleIconButton(
+                      icon: Icons.arrow_back,
+                      onTap: () => Navigator.pop(context),
                     ),
-                    const SizedBox(height: 24),
                     Text(
-                      'Histórico de uso',
+                      'Carteirinha',
                       style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF031535),
-                        letterSpacing: 0.075,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryColor,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    ..._transactions.map(
-                      (t) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: TransactionItem(
-                          title: t.title,
-                          subtitle: t.subtitle,
-                          valueText: t.valueText,
-                        ),
+                    _circleIconButton(
+                      icon: Icons.notifications_outlined,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const NotificationsPage()),
                       ),
                     ),
-                    const SizedBox(height: 32),
                   ],
                 ),
               ),
-            ),
-            AppBottomNavigation(
-              currentIndex: _currentNavIndex,
-              onTap: _onNavTap,
-            ),
-          ],
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: BlocBuilder<ProfileBloc, ProfileState>(
+                    builder: (context, state) {
+                      final memberName = switch (state) {
+                        ProfileLoaded(profile: final p) => p.name,
+                        _ => '',
+                      };
+                      final memberCode = switch (state) {
+                        ProfileLoaded(profile: final p) => p.id,
+                        _ => '',
+                      };
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildCard(memberName, memberCode),
+                          const SizedBox(height: 16),
+                          Builder(
+                            builder: (context) {
+                              final canQr =
+                                  widget.subscription?.canUseQr ?? true;
+                              if (!canQr) {
+                                return PrimaryButton(
+                                  text: 'Restaurar conta para usar QR',
+                                  onPressed: () =>
+                                      RestoreAccountModal.show(context),
+                                );
+                              }
+                              return PrimaryButton(
+                                text: 'Mostrar QR Code',
+                                onPressed: memberCode.isEmpty
+                                    ? null
+                                    : () => QrCodeSheet.show(
+                                          context,
+                                          memberCode: memberCode,
+                                        ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Histórico de uso',
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF031535),
+                              letterSpacing: 0.075,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildUsageHistory(),
+                          const SizedBox(height: 32),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+              AppBottomNavigation(
+                currentIndex: _currentNavIndex,
+                onTap: _onNavTap,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCard() {
+  Widget _buildCard(String memberName, String memberCode) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -198,7 +203,7 @@ class _CardPageState extends State<CardPage> {
           ),
           const SizedBox(height: 2),
           Text(
-            _memberName,
+            memberName,
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -217,7 +222,7 @@ class _CardPageState extends State<CardPage> {
           ),
           const SizedBox(height: 2),
           Text(
-            _memberCode,
+            memberCode,
             style: GoogleFonts.outfit(
               fontSize: 16,
               fontWeight: FontWeight.w500,
@@ -227,6 +232,57 @@ class _CardPageState extends State<CardPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildUsageHistory() {
+    return BlocBuilder<ConsultationBloc, ConsultationState>(
+      builder: (context, state) {
+        if (state is ConsultationLoading || state is ConsultationInitial) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (state is ConsultationError) {
+          return Text(
+            'Não foi possível carregar o histórico.',
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              color: AppTheme.primaryColor.withValues(alpha: 0.6),
+            ),
+          );
+        }
+        final used = (state as ConsultationLoaded)
+            .items
+            .where((c) => c.finalValue != null)
+            .toList();
+        if (used.isEmpty) {
+          return Text(
+            'Nenhum uso registrado ainda.',
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              color: AppTheme.primaryColor.withValues(alpha: 0.6),
+            ),
+          );
+        }
+        final currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+        return Column(
+          children: used
+              .map(
+                (c) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: TransactionItem(
+                    title: c.professionalName ?? c.title,
+                    subtitle: c.specialtyName ??
+                        DateFormat('dd/MM/yyyy').format(c.scheduledDate),
+                    valueText: '-${currency.format(c.finalValue)}',
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
     );
   }
 
@@ -247,16 +303,4 @@ class _CardPageState extends State<CardPage> {
       ),
     );
   }
-}
-
-class _Transaction {
-  final String title;
-  final String subtitle;
-  final String valueText;
-
-  const _Transaction({
-    required this.title,
-    required this.subtitle,
-    required this.valueText,
-  });
 }

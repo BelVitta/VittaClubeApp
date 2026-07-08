@@ -30,7 +30,7 @@ class ReferralItem extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _statusColor.withOpacity(0.1),
+              color: _statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(_statusIcon, color: _statusColor, size: 20),
@@ -80,7 +80,7 @@ class ReferralItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: _statusColor.withOpacity(0.1),
+                color: _statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(

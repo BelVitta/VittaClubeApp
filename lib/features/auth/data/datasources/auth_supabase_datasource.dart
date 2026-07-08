@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
@@ -47,10 +48,14 @@ class AuthSupabaseDataSource implements AuthDataSource {
       }
 
       return _userFromSession(response.user!);
+    } on AuthRetryableFetchException catch (e) {
+      _logServerError('login', e);
+      throw const ServerUnavailableException();
     } on AuthApiException catch (e) {
       throw AuthException(message: _mapSupabaseError(e.message));
     } catch (e) {
-      if (e is AuthException) rethrow;
+      if (e is AuthException || e is ServerUnavailableException) rethrow;
+      _logServerError('login', e);
       throw AuthException(message: 'Erro ao fazer login: ${e.toString()}');
     }
   }
@@ -79,10 +84,14 @@ class AuthSupabaseDataSource implements AuthDataSource {
       }
 
       return _userFromSession(response.user!);
+    } on AuthRetryableFetchException catch (e) {
+      _logServerError('register', e);
+      throw const ServerUnavailableException();
     } on AuthApiException catch (e) {
       throw AuthException(message: _mapSupabaseError(e.message));
     } catch (e) {
-      if (e is AuthException) rethrow;
+      if (e is AuthException || e is ServerUnavailableException) rethrow;
+      _logServerError('register', e);
       throw AuthException(message: 'Erro ao criar conta: ${e.toString()}');
     }
   }
@@ -90,7 +99,6 @@ class AuthSupabaseDataSource implements AuthDataSource {
   @override
   Future<UserModel> signInWithGoogle() async {
     try {
-      // 1. Google Sign-In para obter ID Token
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         throw const AuthException(message: 'Login com Google cancelado.');
@@ -105,7 +113,6 @@ class AuthSupabaseDataSource implements AuthDataSource {
         );
       }
 
-      // 2. Enviar ID Token para Supabase Auth
       final response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
@@ -116,18 +123,31 @@ class AuthSupabaseDataSource implements AuthDataSource {
       }
 
       return _userFromSession(response.user!);
+    } on AuthRetryableFetchException catch (e) {
+      _logServerError('signInWithGoogle', e);
+      throw const ServerUnavailableException();
     } on AuthApiException catch (e) {
       throw AuthException(message: _mapSupabaseError(e.message));
     } on AuthException catch (e) {
       throw AuthException(message: 'Falha no login com Google: ${e.message}');
     } catch (e) {
+      if (e is ServerUnavailableException) rethrow;
       throw AuthException(
         message: 'Erro inesperado no login com Google: ${e.toString()}',
       );
     }
   }
 
-  /// Busca o perfil completo da tabela `profiles` e monta o UserModel.
+  void _logServerError(String operation, Object error) {
+    dev.log(
+      '[Supabase] Serviço indisponível durante "$operation". '
+      'Verifique se o projeto está pausado no plano free.',
+      name: 'AuthDataSource',
+      error: error,
+      level: 900,
+    );
+  }
+
   Future<UserModel> _userFromSession(User user) async {
     try {
       final profile = await _supabase
@@ -141,13 +161,12 @@ class AuthSupabaseDataSource implements AuthDataSource {
           id: user.id,
           name: profile['name'] as String? ?? user.userMetadata?['name'] ?? '',
           email: profile['email'] as String? ?? user.email ?? '',
-          cpf: '', // CPF criptografado no banco, não retorna no select
-          phone: '', // Telefone criptografado, não retorna no select
+          cpf: '',
+          phone: '',
           role: profile['role'] as String? ?? 'user',
         );
       }
 
-      // Fallback: profile ainda não criado (trigger pode ter delay)
       return UserModel(
         id: user.id,
         name: user.userMetadata?['name'] ?? '',
@@ -157,7 +176,6 @@ class AuthSupabaseDataSource implements AuthDataSource {
         role: 'user',
       );
     } catch (e) {
-      // Se falhar ao buscar profile, retorna dados básicos do auth
       return UserModel(
         id: user.id,
         name: user.userMetadata?['name'] ?? '',

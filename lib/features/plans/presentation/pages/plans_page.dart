@@ -72,8 +72,8 @@ class _PlansPageState extends State<PlansPage> {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppTheme.gradientLight.withOpacity(0.3),
-                      Colors.white.withOpacity(0),
+                      AppTheme.gradientLight.withValues(alpha: 0.3),
+                      Colors.white.withValues(alpha: 0),
                     ],
                     stops: const [0, 1],
                   ),
@@ -119,7 +119,7 @@ class _PlansPageState extends State<PlansPage> {
                       width: 39,
                       height: 39,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF01225B).withOpacity(0.2),
+                        color: const Color(0xFF01225B).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(19.5),
                       ),
                       child: const Icon(

@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../domain/entities/pix_automatic_models.dart';
 import '../models/subscription_model.dart';
 
 class SubscriptionSupabaseDataSource {
@@ -57,6 +58,67 @@ class SubscriptionSupabaseDataSource {
         .single();
 
     return SubscriptionModel.fromJson(inserted);
+  }
+
+  Future<void> cancelSubscription({
+    required String subscriptionId,
+    String? reason,
+  }) async {
+    await _supabase
+        .from('subscriptions')
+        .update({
+          'cancelled_at': DateTime.now().toUtc().toIso8601String(),
+          'is_current': false,
+          if (reason != null) 'cancellation_reason': reason,
+        })
+        .eq('id', subscriptionId);
+  }
+
+  Future<SubscriptionModel> createPixAutomaticSubscription({
+    required String planId,
+    required PixAutomaticCustomer customer,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('Nenhum usuário autenticado para criar assinatura.');
+    }
+
+    await _supabase
+        .from('subscriptions')
+        .update({'is_current': false})
+        .eq('user_id', userId)
+        .eq('is_current', true);
+
+    final inserted = await _supabase
+        .from('subscriptions')
+        .insert({
+          'user_id': userId,
+          'plan_id': planId,
+          'badge_level': 'bronze',
+          'plan_level_status': 'bronze',
+          'is_current': true,
+          'pix_customer': customer.toJson(),
+        })
+        .select()
+        .single();
+
+    return SubscriptionModel.fromJson(inserted);
+  }
+
+  Future<PixAutomaticBillingProfile> saveBillingProfile(
+    PixAutomaticBillingProfile profile,
+  ) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('Nenhum usuário autenticado para salvar perfil.');
+    }
+
+    await _supabase.from('billing_profiles').upsert({
+      'user_id': userId,
+      ...profile.toJson(),
+    });
+
+    return profile;
   }
 
   /// `plan_level_status` aceita 'inadimplente'/'cancelado' também, mas o enum

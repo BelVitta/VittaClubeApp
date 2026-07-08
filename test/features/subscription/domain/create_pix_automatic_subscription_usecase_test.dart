@@ -5,7 +5,7 @@ import 'package:vita_clube/core/error/failures.dart';
 import 'package:vita_clube/features/home/domain/entities/plan_level.dart';
 import 'package:vita_clube/features/subscription/domain/entities/subscription_entity.dart';
 import 'package:vita_clube/features/subscription/domain/entities/subscription_status.dart';
-import 'package:vita_clube/features/subscription/domain/repositories/subscription_repository.dart';
+import 'package:vita_clube/features/subscription/domain/entities/pix_automatic_models.dart';
 import 'package:vita_clube/features/subscription/domain/usecases/create_pix_automatic_subscription_usecase.dart';
 
 import '../../../helpers/test_helpers.dart';

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/data/services/auth_session_manager.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
+import '../../../../shared/widgets/app_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
-import '../../../card/presentation/pages/card_page.dart';
-import '../../../professionals/presentation/pages/professionals_page.dart';
 import '../../../plans/presentation/pages/plans_page.dart';
+import '../bloc/profile_bloc.dart';
+import '../bloc/profile_event.dart';
+import '../bloc/profile_state.dart';
 import '../widgets/profile_menu_item.dart';
 import '../widgets/profile_user_card.dart';
 import 'notification_settings_page.dart';
@@ -22,87 +26,93 @@ import '../../../parceiro/presentation/pages/user/seja_parceiro_page.dart';
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  // Navigation icons (same as HomePage)
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            // Background gradient circle (right side like Figma)
-            Positioned(
-              top: -16,
-              right: -180,
-              child: Container(
-                width: 503.5,
-                height: 283.06,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppTheme.gradientLight.withValues(alpha: 0.3),
-                      Colors.white.withValues(alpha: 0),
-                    ],
-                    stops: const [0, 1],
-                  ),
-                ),
-              ),
-            ),
-
-            // Main content
-            Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-
-                        // Header: "Perfil" + notification bell
-                        _buildHeader(context),
-                        const SizedBox(height: 12),
-
-                        // User card
-                        const ProfileUserCard(
-                          name: 'Diana',
-                          email: 'diana23santos@gmail.com',
-                          memberSince: '16/12/2023',
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Menu items
-                        _buildMenuItems(context),
-                        const SizedBox(height: 32),
+    return BlocProvider(
+      create: (_) => sl<ProfileBloc>()..add(const LoadCurrentProfile()),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              // Background gradient circle (right side like Figma)
+              Positioned(
+                top: -16,
+                right: -180,
+                child: Container(
+                  width: 503.5,
+                  height: 283.06,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppTheme.gradientLight.withValues(alpha: 0.3),
+                        Colors.white.withValues(alpha: 0),
                       ],
+                      stops: const [0, 1],
                     ),
                   ),
                 ),
+              ),
 
-                // Bottom Navigation
-                AppBottomNavigation(
-                  currentIndex: 3,
-                  onTap: (index) {
-                    if (index == 0) {
-                      Navigator.pop(context);
-                    } else if (index == 1) {
-                      Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ProfessionalsPage()));
-                    } else if (index == 2) {
-                      Navigator.pushReplacement(context,
-                          MaterialPageRoute(builder: (_) => const CardPage()));
-                    }
-                  },
-                ),
-              ],
-            ),
-          ],
+              // Main content
+              Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+
+                          // Header: "Perfil" + notification bell
+                          _buildHeader(context),
+                          const SizedBox(height: 12),
+
+                          // User card
+                          BlocBuilder<ProfileBloc, ProfileState>(
+                            builder: (context, state) {
+                              return switch (state) {
+                                ProfileLoaded(profile: final p) =>
+                                  ProfileUserCard(
+                                    name: p.name,
+                                    email: p.email,
+                                    memberSince: DateFormat('dd/MM/yyyy')
+                                        .format(p.memberSince),
+                                  ),
+                                _ => const ProfileUserCard(
+                                    name: '',
+                                    email: '',
+                                    memberSince: '',
+                                  ),
+                              };
+                            },
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Menu items
+                          _buildMenuItems(context),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Navigation
+                  AppBottomNavigation(
+                    currentIndex: AppNavigation.profileIndex,
+                    onTap: (index) => AppNavigation.goToBottomNavIndex(
+                      context,
+                      index,
+                      currentIndex: AppNavigation.profileIndex,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

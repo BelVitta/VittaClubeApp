@@ -1,4 +1,5 @@
 import '../../domain/entities/subscription_entity.dart';
+import '../../domain/entities/subscription_status.dart';
 
 class SubscriptionModel extends SubscriptionEntity {
   const SubscriptionModel({
@@ -10,6 +11,11 @@ class SubscriptionModel extends SubscriptionEntity {
     super.expirationDate,
     required super.isCurrent,
     super.cancelledAt,
+    super.pixStatus,
+    super.paymentAccessStatus,
+    super.paymentLinkUrl,
+    super.nextBillingDate,
+    super.currentPeriodEnd,
   });
 
   factory SubscriptionModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +32,19 @@ class SubscriptionModel extends SubscriptionEntity {
       cancelledAt: json['cancelled_at'] == null
           ? null
           : DateTime.parse(json['cancelled_at'] as String),
+      pixStatus: pixAutomaticSubscriptionStatusFromDb(
+        json['pix_status'] as String?,
+      ),
+      paymentAccessStatus: paymentAccessStatusFromDb(
+        json['payment_access_status'] as String?,
+      ),
+      paymentLinkUrl: json['payment_link_url'] as String?,
+      nextBillingDate: json['next_billing_date'] == null
+          ? null
+          : DateTime.parse(json['next_billing_date'] as String),
+      currentPeriodEnd: json['current_period_end'] == null
+          ? null
+          : DateTime.parse(json['current_period_end'] as String),
     );
   }
 }

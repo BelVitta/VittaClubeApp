@@ -181,7 +181,7 @@ class _CouponsListView extends StatelessWidget {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context
                                   .read<CouponBloc>()
                                   .add(LoadCoupons());

@@ -134,7 +134,7 @@ class _SpecialtiesListView extends StatelessWidget {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context
                                   .read<SpecialtyBloc>()
                                   .add(LoadSpecialties());

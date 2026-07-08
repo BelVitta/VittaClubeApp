@@ -417,9 +417,6 @@ class AdminSupabaseDataSource implements AdminDataSource {
           (s) => s['is_current'] == true,
           orElse: () => null,
         ) as Map<String, dynamic>?;
-    final planName =
-        (activeSub?['plans'] as Map<String, dynamic>?)?['name'] as String? ??
-            '';
     return UserAdminModel(
       id: e['id'] as String,
       name: e['name'] as String,

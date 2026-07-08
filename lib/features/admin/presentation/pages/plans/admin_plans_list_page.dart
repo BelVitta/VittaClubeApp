@@ -135,7 +135,7 @@ class _PlansListView extends StatelessWidget {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context
                                   .read<PlanAdminBloc>()
                                   .add(LoadPlans());

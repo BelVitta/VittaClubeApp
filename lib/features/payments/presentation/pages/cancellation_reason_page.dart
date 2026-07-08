@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/config/supabase_config.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../subscription/domain/entities/subscription_status.dart';
+import '../../../subscription/domain/usecases/cancel_subscription_usecase.dart';
 
 /// Página de Cancelamento - Etapa 2: Motivo do cancelamento
 class CancellationReasonPage extends StatefulWidget {
-  const CancellationReasonPage({super.key});
+  final String subscriptionId;
+  final PixAutomaticSubscriptionStatus pixStatus;
+
+  const CancellationReasonPage({
+    super.key,
+    required this.subscriptionId,
+    required this.pixStatus,
+  });
 
   @override
   State<CancellationReasonPage> createState() => _CancellationReasonPageState();
@@ -13,6 +24,7 @@ class CancellationReasonPage extends StatefulWidget {
 
 class _CancellationReasonPageState extends State<CancellationReasonPage> {
   String? _selectedReason;
+  bool _processing = false;
   final _commentsController = TextEditingController();
 
   static const List<String> _reasons = [
@@ -29,15 +41,50 @@ class _CancellationReasonPageState extends State<CancellationReasonPage> {
     super.dispose();
   }
 
-  void _handleContinue() {
-    // TODO: Process cancellation
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Plano cancelado com sucesso.')),
-    );
-    // Pop back to payments page
-    Navigator.of(context)
-      ..pop()
-      ..pop();
+  Future<void> _handleContinue() async {
+    if (_processing) return;
+    setState(() => _processing = true);
+
+    final reason = _selectedReason == 'Outro motivo' &&
+            _commentsController.text.trim().isNotEmpty
+        ? _commentsController.text.trim()
+        : _selectedReason;
+
+    try {
+      if (widget.pixStatus != PixAutomaticSubscriptionStatus.none) {
+        // Pix Automático: cancela a recorrência de verdade no Woovi antes de
+        // marcar a assinatura como cancelada.
+        await SupabaseConfig.client.functions.invoke(
+          'cancel-woovi-subscription',
+          body: {
+            'subscriptionId': widget.subscriptionId,
+            'reason': reason,
+          },
+        );
+      } else {
+        final result = await sl<CancelSubscriptionUseCase>()(
+          subscriptionId: widget.subscriptionId,
+          reason: reason,
+        );
+        final failure = result.fold((f) => f, (_) => null);
+        if (failure != null) throw Exception(failure.message);
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Plano cancelado com sucesso.')),
+      );
+      Navigator.of(context)
+        ..pop()
+        ..pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível cancelar: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
   }
 
   @override
@@ -143,8 +190,8 @@ class _CancellationReasonPageState extends State<CancellationReasonPage> {
                   child: Column(
                     children: [
                       PrimaryButton(
-                        text: 'Continuar',
-                        onPressed: _selectedReason != null
+                        text: _processing ? 'Cancelando...' : 'Continuar',
+                        onPressed: _selectedReason != null && !_processing
                             ? _handleContinue
                             : null,
                       ),

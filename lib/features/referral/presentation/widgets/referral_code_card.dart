@@ -47,7 +47,7 @@ class ReferralCodeCard extends StatelessWidget {
             'Compartilhe seu codigo e ganhe recompensas!',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -56,9 +56,9 @@ class ReferralCodeCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -140,7 +140,7 @@ class ReferralCodeCard extends StatelessWidget {
             '$referralsThisMonth/10 indicacoes este mes',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
         ],

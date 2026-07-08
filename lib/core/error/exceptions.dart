@@ -31,3 +31,11 @@ class AuthException implements Exception {
   @override
   String toString() => 'AuthException: $message';
 }
+
+/// Exceção de serviço indisponível (ex: Supabase pausado no plano free)
+class ServerUnavailableException implements Exception {
+  const ServerUnavailableException();
+
+  @override
+  String toString() => 'ServerUnavailableException: serviço temporariamente indisponível';
+}

@@ -2,11 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../subscription/domain/entities/subscription_status.dart';
 import 'cancellation_reason_page.dart';
 
 /// Página de Cancelamento - Etapa 1: Mostra o que o usuário vai perder
 class CancellationPage extends StatelessWidget {
-  const CancellationPage({super.key});
+  final String subscriptionId;
+  final PixAutomaticSubscriptionStatus pixStatus;
+
+  const CancellationPage({
+    super.key,
+    required this.subscriptionId,
+    required this.pixStatus,
+  });
 
   static const List<String> _benefits = [
     'Consultas com desconto exclusivo',
@@ -125,7 +133,10 @@ class CancellationPage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const CancellationReasonPage(),
+                              builder: (_) => CancellationReasonPage(
+                                subscriptionId: subscriptionId,
+                                pixStatus: pixStatus,
+                              ),
                             ),
                           );
                         },

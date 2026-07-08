@@ -18,6 +18,11 @@ import 'package:vita_clube/features/admin/domain/repositories/notification_templ
 import 'package:vita_clube/features/parceiro/domain/repositories/partner_repository.dart';
 import 'package:vita_clube/features/parceiro/domain/repositories/partner_service_repository.dart';
 import 'package:vita_clube/features/parceiro/domain/repositories/partner_validation_repository.dart';
+import 'package:vita_clube/features/subscription/domain/repositories/subscription_repository.dart';
+import 'package:vita_clube/features/consultation/domain/repositories/consultation_repository.dart';
+import 'package:vita_clube/features/dependents/domain/repositories/dependents_repository.dart';
+import 'package:vita_clube/features/dependents/domain/repositories/dependent_appointment_repository.dart';
+import 'package:vita_clube/features/dependents/domain/repositories/qr_validation_repository.dart';
 
 // ── Repository Mocks ──
 class MockAuthRepository extends Mock implements AuthRepository {}
@@ -61,6 +66,17 @@ class MockPartnerServiceRepository extends Mock
 
 class MockPartnerValidationRepository extends Mock
     implements PartnerValidationRepository {}
+
+class MockSubscriptionRepository extends Mock implements SubscriptionRepository {}
+
+class MockConsultationRepository extends Mock implements ConsultationRepository {}
+
+class MockDependentsRepository extends Mock implements DependentsRepository {}
+
+class MockDependentAppointmentRepository extends Mock
+    implements DependentAppointmentRepository {}
+
+class MockQrValidationRepository extends Mock implements QrValidationRepository {}
 
 // ── External Mocks ──
 class MockSharedPreferences extends Mock implements SharedPreferences {}

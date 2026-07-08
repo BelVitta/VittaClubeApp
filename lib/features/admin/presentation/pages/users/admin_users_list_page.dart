@@ -199,7 +199,7 @@ class _UsersListView extends StatelessWidget {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context
                                   .read<UserAdminBloc>()
                                   .add(LoadUsers());

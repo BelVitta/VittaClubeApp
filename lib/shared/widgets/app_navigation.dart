@@ -9,7 +9,7 @@ class AppNavigation {
   const AppNavigation._();
 
   static const int homeIndex = 0;
-  static const int consultationsIndex = 1;
+  static const int professionalsIndex = 1;
   static const int cardIndex = 2;
   static const int profileIndex = 3;
 
@@ -22,7 +22,7 @@ class AppNavigation {
 
     final Widget page = switch (index) {
       homeIndex => const HomePage(),
-      consultationsIndex => const ProfessionalsPage(),
+      professionalsIndex => const ProfessionalsPage(),
       cardIndex => const CardPage(),
       profileIndex => const ProfilePage(),
       _ => const HomePage(),

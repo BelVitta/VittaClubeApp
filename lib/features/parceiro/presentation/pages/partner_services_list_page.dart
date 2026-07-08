@@ -134,7 +134,7 @@ class _PartnerServicesListView extends StatelessWidget {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context
                                   .read<PartnerServiceBloc>()
                                   .add(LoadPartnerServices(partnerId));

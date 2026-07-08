@@ -7,6 +7,11 @@ import '../config/supabase_config.dart';
 /// o mapa local até alguém chamar [invalidate] ou [set].
 class ClinicSettingsService {
   static const String kDefaultWhatsapp = 'default_whatsapp';
+  static const String kMaxDependentsPerHolder = 'max_dependents_per_holder';
+  static const String kMonthlyUsesPerDependent = 'monthly_uses_per_dependent';
+
+  static const int defaultMaxDependentsPerHolder = 2;
+  static const int defaultMonthlyUsesPerDependent = 3;
 
   final Map<String, String> _cache = {};
   bool _loaded = false;
@@ -26,6 +31,34 @@ class ClinicSettingsService {
       'value': value,
     });
     _cache[key] = value;
+  }
+
+  /// Máximo de dependentes por titular.
+  Future<int> getMaxDependentsPerHolder() async {
+    final value = await get(kMaxDependentsPerHolder);
+    return int.tryParse(value ?? '') ?? defaultMaxDependentsPerHolder;
+  }
+
+  /// Usos mensais por dependente.
+  Future<int> getMonthlyUsesPerDependent() async {
+    final value = await get(kMonthlyUsesPerDependent);
+    return int.tryParse(value ?? '') ?? defaultMonthlyUsesPerDependent;
+  }
+
+  /// Salva o máximo de dependentes por titular.
+  Future<void> setMaxDependentsPerHolder(int max) =>
+      set(kMaxDependentsPerHolder, max.toString());
+
+  /// Salva os usos mensais por dependente.
+  Future<void> setMonthlyUsesPerDependent(int uses) =>
+      set(kMonthlyUsesPerDependent, uses.toString());
+
+  /// Pré-popula o cache em memória sem bater no Supabase. Usado em testes.
+  void seedCacheForTesting(Map<String, String> values) {
+    _cache
+      ..clear()
+      ..addAll(values);
+    _loaded = true;
   }
 
   /// Força nova leitura da tabela na próxima chamada de [get].

@@ -10,6 +10,7 @@ import '../services/clinic_settings_service.dart';
 
 import '../../features/auth/data/datasources/auth_datasource.dart';
 import '../../features/auth/data/datasources/auth_supabase_datasource.dart';
+import '../../features/auth/data/datasources/auth_unavailable_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/data/services/auth_session_manager.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -179,6 +180,16 @@ import '../../features/consultation/domain/repositories/consultation_repository.
 import '../../features/consultation/domain/usecases/get_user_consultations_usecase.dart';
 import '../../features/consultation/domain/usecases/record_consultation_usecase.dart';
 import '../../features/consultation/presentation/bloc/consultation_bloc.dart';
+import '../../features/professionals/data/datasources/professionals_supabase_datasource.dart';
+import '../../features/professionals/data/repositories/professionals_repository_impl.dart';
+import '../../features/professionals/domain/repositories/professionals_repository.dart';
+import '../../features/professionals/domain/usecases/get_active_professionals_usecase.dart';
+import '../../features/professionals/presentation/bloc/professionals_bloc.dart';
+import '../../features/payments/data/datasources/payments_supabase_datasource.dart';
+import '../../features/payments/data/repositories/payments_repository_impl.dart';
+import '../../features/payments/domain/repositories/payments_repository.dart';
+import '../../features/payments/domain/usecases/get_payment_history_usecase.dart';
+import '../../features/payments/presentation/bloc/payments_bloc.dart';
 
 // Profile (perfil do usuário logado)
 import '../../features/profile/data/datasources/profile_supabase_datasource.dart';
@@ -269,7 +280,9 @@ Future<void> init() async {
 
   // Data Sources
   sl.registerLazySingleton<AuthDataSource>(
-    () => AuthSupabaseDataSource(supabaseClient: SupabaseConfig.client),
+    () => SupabaseConfig.isInitialized
+        ? AuthSupabaseDataSource(supabaseClient: SupabaseConfig.client)
+        : const AuthUnavailableDataSource(),
   );
   sl.registerLazySingleton(
     () => AuthSessionManager(
@@ -512,6 +525,26 @@ Future<void> init() async {
   );
 
   //============================================================
+  // Features - Professionals (listagem pública de profissionais)
+  //============================================================
+
+  sl.registerFactory(
+    () => ProfessionalsBloc(getProfessionalsUseCase: sl()),
+  );
+
+  sl.registerLazySingleton(() => GetActiveProfessionalsUseCase(sl()));
+
+  sl.registerLazySingleton<ProfessionalsRepository>(
+    () => ProfessionalsRepositoryImpl(dataSource: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => ProfessionalsSupabaseDataSource(
+      supabaseClient: SupabaseConfig.client,
+    ),
+  );
+
+  //============================================================
   // Features - Profile (Perfil do usuário logado)
   //============================================================
 
@@ -554,6 +587,24 @@ Future<void> init() async {
   // Plans datasource (leitura dos planos oferecidos + benefícios)
   sl.registerLazySingleton(
     () => PlansSupabaseDataSource(supabaseClient: SupabaseConfig.client),
+  );
+
+  //============================================================
+  // Features - Payments (histórico de pagamentos do usuário logado)
+  //============================================================
+
+  sl.registerFactory(
+    () => PaymentsBloc(getPaymentHistoryUseCase: sl()),
+  );
+
+  sl.registerLazySingleton(() => GetPaymentHistoryUseCase(sl()));
+
+  sl.registerLazySingleton<PaymentsRepository>(
+    () => PaymentsRepositoryImpl(dataSource: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => PaymentsSupabaseDataSource(supabaseClient: SupabaseConfig.client),
   );
 
   //============================================================

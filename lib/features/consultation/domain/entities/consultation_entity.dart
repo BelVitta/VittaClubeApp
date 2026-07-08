@@ -10,6 +10,8 @@ class ConsultationEntity extends Equatable {
   final String? professionalId;
   final String? professionalName;
   final String? specialtyName;
+  final double? finalValue;
+  final double? discountPercentage;
 
   const ConsultationEntity({
     required this.id,
@@ -20,6 +22,8 @@ class ConsultationEntity extends Equatable {
     this.professionalId,
     this.professionalName,
     this.specialtyName,
+    this.finalValue,
+    this.discountPercentage,
   });
 
   @override
@@ -32,5 +36,7 @@ class ConsultationEntity extends Equatable {
         professionalId,
         professionalName,
         specialtyName,
+        finalValue,
+        discountPercentage,
       ];
 }

@@ -200,7 +200,7 @@ class _ProfessionalsListView extends StatelessWidget {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context.read<ProfessionalBloc>().add(LoadProfessionals());
                             }
                           });

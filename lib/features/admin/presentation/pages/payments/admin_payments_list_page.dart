@@ -191,7 +191,7 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context
                                   .read<PaymentAdminBloc>()
                                   .add(LoadPayments());

@@ -16,4 +16,11 @@ enum SubscriptionType {
 
   /// Verifica se tem desconto
   bool get hasDiscount => discount != null;
+
+  /// Período de cobrança, usado em textos como "R$ 49,90/mês".
+  String get periodLabel => switch (this) {
+        SubscriptionType.monthly => 'mês',
+        SubscriptionType.semiannual => 'semestre',
+        SubscriptionType.annual => 'ano',
+      };
 }

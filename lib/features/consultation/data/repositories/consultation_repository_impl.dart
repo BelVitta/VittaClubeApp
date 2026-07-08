@@ -19,4 +19,28 @@ class ConsultationRepositoryImpl implements ConsultationRepository {
       return Left(ServerFailure('Erro ao buscar consultas: ${e.toString()}'));
     }
   }
+
+  @override
+  Future<Either<Failure, ConsultationEntity>> recordConsultation({
+    required String userId,
+    required String validatedBy,
+    required double originalValue,
+    required double discountPercentage,
+    required double discountAmount,
+    required double finalValue,
+  }) async {
+    try {
+      final result = await dataSource.recordConsultation(
+        userId: userId,
+        validatedBy: validatedBy,
+        originalValue: originalValue,
+        discountPercentage: discountPercentage,
+        discountAmount: discountAmount,
+        finalValue: finalValue,
+      );
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure('Erro ao registrar consulta: ${e.toString()}'));
+    }
+  }
 }

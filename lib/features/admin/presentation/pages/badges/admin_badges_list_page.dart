@@ -131,7 +131,7 @@ class _BadgesListView extends StatelessWidget {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context
                                   .read<BadgeBloc>()
                                   .add(LoadBadges());

@@ -6,4 +6,14 @@ import '../entities/consultation_entity.dart';
 abstract class ConsultationRepository {
   /// Consultas do usuário logado (mais recentes primeiro).
   Future<Either<Failure, List<ConsultationEntity>>> getForCurrentUser();
+
+  /// Registra uma consulta realizada e retorna a entidade criada.
+  Future<Either<Failure, ConsultationEntity>> recordConsultation({
+    required String userId,
+    required String validatedBy,
+    required double originalValue,
+    required double discountPercentage,
+    required double discountAmount,
+    required double finalValue,
+  });
 }

@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 
 import '../../../../core/error/failures.dart';
+import '../entities/pix_automatic_models.dart';
 import '../entities/subscription_entity.dart';
 import '../repositories/subscription_repository.dart';
 

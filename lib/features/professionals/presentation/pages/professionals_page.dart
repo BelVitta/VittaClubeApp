@@ -1,77 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/whatsapp_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
-import '../../../card/presentation/pages/card_page.dart';
+import '../../../../shared/widgets/app_navigation.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
-import '../../../profile/presentation/pages/profile_page.dart';
+import '../../domain/entities/professional_entity.dart';
+import '../bloc/professionals_bloc.dart';
+import '../bloc/professionals_event.dart';
+import '../bloc/professionals_state.dart';
 import '../widgets/professional_card.dart';
 import '../widgets/specialty_filter_sheet.dart';
 
-/// Entidade local (mock) para profissionais exibidos na listagem.
-/// TODO: substituir por feature lendo `professionals` do Supabase.
-class _ProfessionalData {
-  final String name;
-  final String specialty;
-  final String availableDays;
-  final Color avatarBgColor;
-
-  const _ProfessionalData({
-    required this.name,
-    required this.specialty,
-    required this.availableDays,
-    this.avatarBgColor = const Color(0xFFFFCD66),
-  });
-}
-
 /// Página de lista de profissionais com filtro por especialidade.
-class ProfessionalsPage extends StatefulWidget {
+class ProfessionalsPage extends StatelessWidget {
   const ProfessionalsPage({super.key});
 
   @override
-  State<ProfessionalsPage> createState() => _ProfessionalsPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<ProfessionalsBloc>()..add(const LoadProfessionals()),
+      child: const _ProfessionalsView(),
+    );
+  }
 }
 
-class _ProfessionalsPageState extends State<ProfessionalsPage> {
+class _ProfessionalsView extends StatefulWidget {
+  const _ProfessionalsView();
+
+  @override
+  State<_ProfessionalsView> createState() => _ProfessionalsViewState();
+}
+
+class _ProfessionalsViewState extends State<_ProfessionalsView> {
   String? _activeFilter;
-  int _currentNavIndex = 1;
+  final int _currentNavIndex = 1;
 
-  static const List<_ProfessionalData> _all = [
-    _ProfessionalData(
-      name: 'Dra. Marina Silva',
-      specialty: 'Clínico Geral',
-      availableDays: 'Seg, Qua, Sex',
-      avatarBgColor: Color(0xFFFFCD66),
-    ),
-    _ProfessionalData(
-      name: 'Dr. Ricardo Alves',
-      specialty: 'Nutrição',
-      availableDays: 'Ter, Qui',
-      avatarBgColor: Color(0xFF7BDFF2),
-    ),
-    _ProfessionalData(
-      name: 'Dra. Laura Mendes',
-      specialty: 'Fisioterapia',
-      availableDays: 'Seg a Sex',
-      avatarBgColor: Color(0xFFB2F7A1),
-    ),
-    _ProfessionalData(
-      name: 'Dr. Pedro Ramirez',
-      specialty: 'Psiquiatria',
-      availableDays: 'Qua, Sex',
-      avatarBgColor: Color(0xFFF2A4D3),
-    ),
-  ];
-
-  List<_ProfessionalData> get _filtered {
-    if (_activeFilter == null) return _all;
-    return _all.where((p) => p.specialty == _activeFilter).toList();
+  List<ProfessionalEntity> _filtered(List<ProfessionalEntity> all) {
+    if (_activeFilter == null) return all;
+    return all.where((p) => p.specialtyName == _activeFilter).toList();
   }
 
   Future<void> _openWhatsApp(String professionalName) async {
-    // TODO: passar professionalNumber quando trocarmos o mock `_all` por dados
-    // reais da tabela `professionals` (campo whatsapp_encrypted descriptografado).
     final result = await WhatsAppLauncher.open(
       presetMessage:
           'Olá! Gostaria de agendar uma consulta com $professionalName pelo Vita Clube.',
@@ -98,38 +70,24 @@ class _ProfessionalsPageState extends State<ProfessionalsPage> {
     }
   }
 
-  Future<void> _openFilter() async {
+  Future<void> _openFilter(List<String> specialties) async {
     final chosen = await SpecialtyFilterSheet.show(
       context,
       currentFilter: _activeFilter,
+      specialties: specialties,
     );
     if (!mounted) return;
     setState(() => _activeFilter = chosen);
   }
 
-  void _onNavTap(int index) {
-    setState(() => _currentNavIndex = index);
-    Widget? next;
-    if (index == 0) {
-      Navigator.pop(context);
-      return;
-    } else if (index == 2) {
-      next = const CardPage();
-    } else if (index == 3) {
-      next = const ProfilePage();
-    }
-    if (next != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => next!)).then(
-        (_) {
-          if (mounted) setState(() => _currentNavIndex = 1);
-        },
+  void _onNavTap(int index) => AppNavigation.goToBottomNavIndex(
+        context,
+        index,
+        currentIndex: _currentNavIndex,
       );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final list = _filtered;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -142,7 +100,7 @@ class _ProfessionalsPageState extends State<ProfessionalsPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Médicos',
+                    'Profissionais',
                     style: GoogleFonts.outfit(
                       fontSize: 24,
                       fontWeight: FontWeight.w400,
@@ -175,78 +133,113 @@ class _ProfessionalsPageState extends State<ProfessionalsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  onTap: _openFilter,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFEBEEF2)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.tune,
-                            size: 12, color: AppTheme.primaryColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          _activeFilter ?? 'Filtrar',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.primaryColor,
-                            letterSpacing: 0.06,
-                          ),
-                        ),
-                        if (_activeFilter != null) ...[
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () =>
-                                setState(() => _activeFilter = null),
-                            child: const Icon(Icons.close,
-                                size: 12, color: Color(0xFF6D7F95)),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
             Expanded(
-              child: list.isEmpty
-                  ? Center(
+              child: BlocBuilder<ProfessionalsBloc, ProfessionalsState>(
+                builder: (context, state) {
+                  if (state is ProfessionalsLoading ||
+                      state is ProfessionalsInitial) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (state is ProfessionalsError) {
+                    return Center(
                       child: Text(
-                        'Nenhum profissional encontrado.',
+                        'Não foi possível carregar os profissionais.',
                         style: GoogleFonts.outfit(
                           fontSize: 14,
                           color: const Color(0xFF6D7F95),
                         ),
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (_, i) {
-                        final p = list[i];
-                        return ProfessionalCard(
-                          name: p.name,
-                          specialty: p.specialty,
-                          availableDays: p.availableDays,
-                          avatarBgColor: p.avatarBgColor,
-                          isLarge: true,
-                          onWhatsApp: () => _openWhatsApp(p.name),
-                        );
-                      },
-                    ),
+                    );
+                  }
+                  final all = (state as ProfessionalsLoaded).items;
+                  final specialties = all
+                      .map((p) => p.specialtyName)
+                      .where((s) => s.isNotEmpty)
+                      .toSet()
+                      .toList()
+                    ..sort();
+                  final list = _filtered(all);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: GestureDetector(
+                          onTap: () => _openFilter(specialties),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border:
+                                  Border.all(color: const Color(0xFFEBEEF2)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.tune,
+                                    size: 12, color: AppTheme.primaryColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _activeFilter ?? 'Filtrar',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.primaryColor,
+                                    letterSpacing: 0.06,
+                                  ),
+                                ),
+                                if (_activeFilter != null) ...[
+                                  const SizedBox(width: 4),
+                                  GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _activeFilter = null),
+                                    child: const Icon(Icons.close,
+                                        size: 12, color: Color(0xFF6D7F95)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: list.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'Nenhum profissional encontrado.',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14,
+                                    color: const Color(0xFF6D7F95),
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                                itemCount: list.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 8),
+                                itemBuilder: (_, i) {
+                                  final p = list[i];
+                                  return ProfessionalCard(
+                                    name: p.name,
+                                    specialty: p.specialtyName,
+                                    availableDays: p.availableDays,
+                                    avatarBgColor: Color(p.avatarBgColor),
+                                    avatarUrl: p.avatarUrl,
+                                    isLarge: true,
+                                    onWhatsApp: () => _openWhatsApp(p.name),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
             AppBottomNavigation(
               currentIndex: _currentNavIndex,
@@ -257,5 +250,4 @@ class _ProfessionalsPageState extends State<ProfessionalsPage> {
       ),
     );
   }
-
 }

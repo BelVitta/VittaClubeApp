@@ -7,36 +7,29 @@ import '../../../../shared/widgets/primary_button.dart';
 /// Retorna a especialidade selecionada (ou null se "Fechar").
 class SpecialtyFilterSheet extends StatefulWidget {
   final String? currentFilter;
+  final List<String> specialties;
 
   const SpecialtyFilterSheet({
     super.key,
     this.currentFilter,
+    required this.specialties,
   });
 
   static Future<String?> show(
     BuildContext context, {
     String? currentFilter,
+    required List<String> specialties,
   }) {
     return showModalBottomSheet<String?>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => SpecialtyFilterSheet(currentFilter: currentFilter),
+      builder: (_) => SpecialtyFilterSheet(
+        currentFilter: currentFilter,
+        specialties: specialties,
+      ),
     );
   }
-
-  static const List<String> specialties = [
-    'Clínico Geral',
-    'Pediatria',
-    'Dermatologia',
-    'Ginecologia/Obstetrícia',
-    'Cardiologia',
-    'Ortopedia',
-    'Psiquiatria',
-    'Oftalmologia',
-    'Nutrição',
-    'Fisioterapia',
-  ];
 
   @override
   State<SpecialtyFilterSheet> createState() => _SpecialtyFilterSheetState();
@@ -53,8 +46,8 @@ class _SpecialtyFilterSheetState extends State<SpecialtyFilterSheet> {
   }
 
   List<String> get _filteredSpecialties {
-    if (_search.isEmpty) return SpecialtyFilterSheet.specialties;
-    return SpecialtyFilterSheet.specialties
+    if (_search.isEmpty) return widget.specialties;
+    return widget.specialties
         .where((s) => s.toLowerCase().contains(_search.toLowerCase()))
         .toList();
   }

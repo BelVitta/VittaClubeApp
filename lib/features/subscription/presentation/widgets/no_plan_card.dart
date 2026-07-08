@@ -4,11 +4,16 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 
 /// Card chamativo exibido no topo do home quando o usuário ainda não tem
-/// assinatura ativa. Convida a conhecer os planos.
+/// assinatura ativa. Convida a assinar, já mostrando o valor do plano mais
+/// barato, e leva direto para o pagamento.
 class NoPlanCard extends StatelessWidget {
   final VoidCallback onTap;
 
-  const NoPlanCard({super.key, required this.onTap});
+  /// Preço formatado do plano mais barato (ex: "R\$ 49,90/mês"). `null`
+  /// enquanto os planos ainda estão carregando.
+  final String? priceLabel;
+
+  const NoPlanCard({super.key, required this.onTap, this.priceLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -76,11 +81,23 @@ class NoPlanCard extends StatelessWidget {
                         height: 1.3,
                       ),
                     ),
+                    if (priceLabel != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        'A partir de $priceLabel',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.08,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Row(
                       children: [
                         Text(
-                          'Conhecer planos',
+                          'Assinar agora',
                           style: GoogleFonts.outfit(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,

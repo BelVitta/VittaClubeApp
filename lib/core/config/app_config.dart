@@ -50,7 +50,7 @@ class AppConfig {
       ),
       infinityPayRedirectUrl: const String.fromEnvironment(
         'INFINITYPAY_REDIRECT_URL',
-        defaultValue: 'vittaclube://payment/infinitypay/return',
+        defaultValue: '',
       ),
       infinityPayWebhookUrl: const String.fromEnvironment(
         'INFINITYPAY_WEBHOOK_URL',
@@ -81,7 +81,7 @@ class AppConfig {
       ),
       infinityPayRedirectUrl: const String.fromEnvironment(
         'INFINITYPAY_REDIRECT_URL',
-        defaultValue: 'vittaclube://payment/infinitypay/return',
+        defaultValue: '',
       ),
       infinityPayWebhookUrl: const String.fromEnvironment(
         'INFINITYPAY_WEBHOOK_URL',
@@ -110,7 +110,7 @@ class AppConfig {
       ),
       infinityPayRedirectUrl: const String.fromEnvironment(
         'INFINITYPAY_REDIRECT_URL',
-        defaultValue: 'vittaclube://payment/infinitypay/return',
+        defaultValue: '',
       ),
       infinityPayWebhookUrl: const String.fromEnvironment(
         'INFINITYPAY_WEBHOOK_URL',
@@ -131,5 +131,15 @@ class AppConfig {
     if (infinityPayWebhookUrl.isNotEmpty) return infinityPayWebhookUrl;
     if (supabaseUrl.isEmpty) return '';
     return '$supabaseUrl/functions/v1/infinitypay-webhook';
+  }
+
+  /// A API da InfinitePay recusa `redirect_url` com esquema customizado
+  /// (`vittaclube://...`), exige http(s). Por isso usamos uma Edge Function
+  /// (`infinitypay-return`) como página-ponte: a InfinitePay redireciona
+  /// pra ela, e ela repassa pro deep link do app.
+  String get resolvedInfinityPayRedirectUrl {
+    if (infinityPayRedirectUrl.isNotEmpty) return infinityPayRedirectUrl;
+    if (supabaseUrl.isEmpty) return '';
+    return '$supabaseUrl/functions/v1/infinitypay-return';
   }
 }

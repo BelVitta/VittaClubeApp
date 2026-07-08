@@ -18,7 +18,9 @@ import '../widgets/payment_method_item.dart';
 import '../widgets/payment_summary_sheet.dart';
 import '../widgets/terms_bottom_sheet.dart';
 
-enum PaymentMethod { creditCard, pix, infinityPay }
+/// `creditCard` é processado via checkout redirecionado da InfinitePay —
+/// não existe formulário próprio de cartão no app.
+enum PaymentMethod { creditCard, pix }
 
 /// Página de pagamento — Cartão de Crédito ou Pix.
 /// Persiste o resultado real em `payments` e ativa `subscriptions` ao aprovar.
@@ -38,32 +40,21 @@ class _PaymentPageState extends State<PaymentPage> {
   PaymentMethod _selectedMethod = PaymentMethod.creditCard;
   bool _processing = false;
 
-  final _cardNameController = TextEditingController();
-  final _cardNumberController = TextEditingController();
-  final _cardExpiryController = TextEditingController();
-  final _cardCvvController = TextEditingController();
   final _pixNameController = TextEditingController();
   final _pixCpfController = TextEditingController();
 
-  double get _fee => _selectedMethod == PaymentMethod.infinityPay ? 0 : 4.99;
-  double get _total => widget.selectedPlan.price + _fee;
+  double get _total => widget.selectedPlan.price;
   String get _paymentMethodLabel {
     switch (_selectedMethod) {
       case PaymentMethod.creditCard:
         return 'Cartão de Crédito';
       case PaymentMethod.pix:
         return 'Pix';
-      case PaymentMethod.infinityPay:
-        return 'Cartão via InfinitePay';
     }
   }
 
   @override
   void dispose() {
-    _cardNameController.dispose();
-    _cardNumberController.dispose();
-    _cardExpiryController.dispose();
-    _cardCvvController.dispose();
     _pixNameController.dispose();
     _pixCpfController.dispose();
     super.dispose();
@@ -80,9 +71,8 @@ class _PaymentPageState extends State<PaymentPage> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => PaymentSummarySheet(
-        planName: widget.selectedPlan.subscriptionType.displayName,
+        planName: widget.selectedPlan.name,
         paymentMethod: _paymentMethodLabel,
-        fee: _fee,
         total: _total,
         onConfirm: () {
           Navigator.pop(context);
@@ -94,7 +84,7 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Future<void> _processPayment() async {
-    if (_selectedMethod == PaymentMethod.infinityPay) {
+    if (_selectedMethod == PaymentMethod.creditCard) {
       await _startInfinityPayCheckout();
       return;
     }
@@ -107,13 +97,7 @@ class _PaymentPageState extends State<PaymentPage> {
     final request = PaymentRequest(
       planId: widget.selectedPlan.id,
       amount: widget.selectedPlan.price,
-      method: _selectedMethod == PaymentMethod.creditCard
-          ? PaymentMethodType.creditCard
-          : PaymentMethodType.pix,
-      cardHolderName: _cardNameController.text,
-      cardNumber: _cardNumberController.text,
-      cardExpiry: _cardExpiryController.text,
-      cardCvv: _cardCvvController.text,
+      method: PaymentMethodType.pix,
     );
 
     try {
@@ -180,7 +164,7 @@ class _PaymentPageState extends State<PaymentPage> {
         InfinityPayCreateLinkRequest(
           handle: service.handle,
           orderNsu: orderNsu,
-          redirectUrl: appConfig.infinityPayRedirectUrl,
+          redirectUrl: appConfig.resolvedInfinityPayRedirectUrl,
           webhookUrl: appConfig.resolvedInfinityPayWebhookUrl.isEmpty
               ? null
               : appConfig.resolvedInfinityPayWebhookUrl,
@@ -454,20 +438,11 @@ class _PaymentPageState extends State<PaymentPage> {
           Row(
             children: [
               Text(
-                widget.selectedPlan.subscriptionType.displayName,
+                widget.selectedPlan.name,
                 style: GoogleFonts.outfit(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.primaryColor,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                widget.selectedPlan.name,
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFF6D7F95),
                 ),
               ),
             ],
@@ -475,9 +450,6 @@ class _PaymentPageState extends State<PaymentPage> {
           const SizedBox(height: 10),
           _buildSummaryRow('Plano',
               'R\$ ${widget.selectedPlan.price.toStringAsFixed(2).replaceAll('.', ',')}'),
-          const SizedBox(height: 10),
-          _buildSummaryRow(
-              'Taxa', 'R\$ ${_fee.toStringAsFixed(2).replaceAll('.', ',')}'),
           const SizedBox(height: 10),
           _buildSummaryRow(
             'Total',
@@ -541,14 +513,6 @@ class _PaymentPageState extends State<PaymentPage> {
           isSelected: _selectedMethod == PaymentMethod.pix,
           onTap: () => setState(() => _selectedMethod = PaymentMethod.pix),
           trailing: _buildPixIcon(),
-        ),
-        const SizedBox(height: 6),
-        PaymentMethodItem(
-          title: 'Cartão via InfinitePay',
-          isSelected: _selectedMethod == PaymentMethod.infinityPay,
-          onTap: () =>
-              setState(() => _selectedMethod = PaymentMethod.infinityPay),
-          trailing: _buildInfinityPayIcon(),
         ),
       ],
     );
@@ -625,14 +589,6 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  Widget _buildInfinityPayIcon() {
-    return const Icon(
-      Icons.open_in_new_rounded,
-      color: AppTheme.primaryColor,
-      size: 22,
-    );
-  }
-
   Widget _buildPaymentForm() {
     return Container(
       width: double.infinity,
@@ -643,66 +599,9 @@ class _PaymentPageState extends State<PaymentPage> {
         border: Border.all(color: const Color(0xFFEBEEF2)),
       ),
       child: switch (_selectedMethod) {
-        PaymentMethod.creditCard => _buildCreditCardForm(),
+        PaymentMethod.creditCard => _buildCardRedirectForm(),
         PaymentMethod.pix => _buildPixForm(),
-        PaymentMethod.infinityPay => _buildInfinityPayForm(),
       },
-    );
-  }
-
-  Widget _buildCreditCardForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildFormField(
-          label: 'Nome do Titular',
-          hint: 'Nome Completo',
-          controller: _cardNameController,
-        ),
-        const SizedBox(height: 6),
-        _buildFormField(
-          label: 'Número do Cartão',
-          hint: '--- --- --- ----',
-          controller: _cardNumberController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(16),
-            _CardNumberFormatter(),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(
-              child: _buildFormField(
-                label: 'Validade',
-                hint: '06/26',
-                controller: _cardExpiryController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(4),
-                  _ExpiryDateFormatter(),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _buildFormField(
-                label: 'CVV',
-                hint: '000',
-                controller: _cardCvvController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(3),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -731,7 +630,7 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  Widget _buildInfinityPayForm() {
+  Widget _buildCardRedirectForm() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -857,50 +756,6 @@ class _PaymentPageState extends State<PaymentPage> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Formatter para número de cartão de crédito (0000 0000 0000 0000)
-class _CardNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text.replaceAll(' ', '');
-    final buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      if ((i + 1) % 4 == 0 && i + 1 != text.length) {
-        buffer.write(' ');
-      }
-    }
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: buffer.length),
-    );
-  }
-}
-
-/// Formatter para data de validade (MM/YY)
-class _ExpiryDateFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text.replaceAll('/', '');
-    final buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      if (i == 1 && i + 1 != text.length) {
-        buffer.write('/');
-      }
-    }
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 }

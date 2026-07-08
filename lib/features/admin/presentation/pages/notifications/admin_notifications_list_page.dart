@@ -203,7 +203,7 @@ class _NotificationsListView extends StatelessWidget {
                               ),
                             ),
                           ).then((result) {
-                            if (result == true) {
+                            if (result == true && context.mounted) {
                               context
                                   .read<NotificationTemplateBloc>()
                                   .add(LoadNotificationTemplates());

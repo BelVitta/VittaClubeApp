@@ -164,9 +164,9 @@ class _ReferralView extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -240,7 +240,7 @@ class _ReferralView extends StatelessWidget {
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
@@ -276,7 +276,7 @@ class _ReferralView extends StatelessWidget {
         child: Column(
           children: [
             Icon(Icons.people_outline,
-                size: 48, color: AppTheme.secondaryText.withOpacity(0.5)),
+                size: 48, color: AppTheme.secondaryText.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
             Text(
               'Nenhuma indicacao ainda',

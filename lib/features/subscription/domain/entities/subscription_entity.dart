@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../home/domain/entities/plan_level.dart';
+import '../services/subscription_access_policy.dart';
+import 'subscription_status.dart';
 
 /// Representa a assinatura atual do usuário logado.
 ///
@@ -16,6 +18,21 @@ class SubscriptionEntity extends Equatable {
   final bool isCurrent;
   final DateTime? cancelledAt;
 
+  /// Status do Pix Automático. `none` quando não utiliza Pix Automático.
+  final PixAutomaticSubscriptionStatus pixStatus;
+
+  /// Status de acesso ao pagamento (controla bloqueio por inadimplência).
+  final PaymentAccessStatus paymentAccessStatus;
+
+  /// URL de redirecionamento para o app do banco (Pix Automático).
+  final String? paymentLinkUrl;
+
+  /// Data da próxima cobrança (Pix Automático ativo).
+  final DateTime? nextBillingDate;
+
+  /// Fim do período pago atual (usado para cancelamentos com período vigente).
+  final DateTime? currentPeriodEnd;
+
   const SubscriptionEntity({
     required this.id,
     required this.userId,
@@ -25,6 +42,11 @@ class SubscriptionEntity extends Equatable {
     this.expirationDate,
     required this.isCurrent,
     this.cancelledAt,
+    this.pixStatus = PixAutomaticSubscriptionStatus.none,
+    this.paymentAccessStatus = PaymentAccessStatus.allowed,
+    this.paymentLinkUrl,
+    this.nextBillingDate,
+    this.currentPeriodEnd,
   });
 
   bool get isActive =>
@@ -33,9 +55,33 @@ class SubscriptionEntity extends Equatable {
       level != PlanLevel.inadimplente &&
       level != PlanLevel.cancelado;
 
+  bool get canAccessBenefits {
+    if (pixStatus == PixAutomaticSubscriptionStatus.none) return isActive;
+    return SubscriptionAccessPolicy(
+      status: pixStatus,
+      accessStatus: paymentAccessStatus,
+      currentPeriodEnd: currentPeriodEnd,
+    ).canAccessBenefits;
+  }
+
+  bool get canUseQr => canAccessBenefits;
+
   @override
-  List<Object?> get props =>
-      [id, userId, planId, level, activationDate, expirationDate, isCurrent, cancelledAt];
+  List<Object?> get props => [
+        id,
+        userId,
+        planId,
+        level,
+        activationDate,
+        expirationDate,
+        isCurrent,
+        cancelledAt,
+        pixStatus,
+        paymentAccessStatus,
+        paymentLinkUrl,
+        nextBillingDate,
+        currentPeriodEnd,
+      ];
 }
 
 /// Converte o enum `plan_level_status` do Supabase (snake_case em pt-br) para o

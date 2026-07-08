@@ -8,7 +8,6 @@ import '../../../../shared/widgets/secondary_button.dart';
 class PaymentSummarySheet extends StatelessWidget {
   final String planName;
   final String paymentMethod;
-  final double fee;
   final double total;
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
@@ -17,7 +16,6 @@ class PaymentSummarySheet extends StatelessWidget {
     super.key,
     required this.planName,
     required this.paymentMethod,
-    required this.fee,
     required this.total,
     required this.onConfirm,
     required this.onCancel,
@@ -54,12 +52,6 @@ class PaymentSummarySheet extends StatelessWidget {
                 _buildSummaryRow('Plano', planName),
                 const SizedBox(height: 8),
                 _buildSummaryRow('Método de Pagamento', paymentMethod),
-                const SizedBox(height: 8),
-                _buildSummaryRow(
-                  'Taxa',
-                  'R\$ ${fee.toStringAsFixed(2).replaceAll('.', ',')}',
-                  valueFontSize: 15,
-                ),
                 const SizedBox(height: 8),
                 _buildSummaryRow(
                   'Total',

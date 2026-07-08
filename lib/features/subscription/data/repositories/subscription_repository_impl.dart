@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../domain/entities/pix_automatic_models.dart';
 import '../../domain/entities/subscription_entity.dart';
 import '../../domain/repositories/subscription_repository.dart';
 import '../datasources/subscription_supabase_datasource.dart';
@@ -33,6 +34,60 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
       return Right(result);
     } catch (e) {
       return Left(ServerFailure('Erro ao ativar assinatura: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> cancelSubscription({
+    required String subscriptionId,
+    String? reason,
+  }) async {
+    try {
+      await dataSource.cancelSubscription(
+        subscriptionId: subscriptionId,
+        reason: reason,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure('Erro ao cancelar assinatura: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, SubscriptionEntity>> createPixAutomaticSubscription({
+    required String planId,
+    required PixAutomaticCustomer customer,
+  }) async {
+    try {
+      final result = await dataSource.createPixAutomaticSubscription(
+        planId: planId,
+        customer: customer,
+      );
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure('Erro ao criar assinatura Pix Automático: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, SubscriptionEntity?>> refreshSubscriptionStatus() async {
+    try {
+      final result = await dataSource.getCurrent();
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure('Erro ao atualizar status da assinatura: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, PixAutomaticBillingProfile>> saveBillingProfile(
+    PixAutomaticBillingProfile profile,
+  ) async {
+    try {
+      final result = await dataSource.saveBillingProfile(profile);
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure('Erro ao salvar perfil de cobrança: ${e.toString()}'));
     }
   }
 }

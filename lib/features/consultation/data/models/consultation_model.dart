@@ -10,6 +10,8 @@ class ConsultationModel extends ConsultationEntity {
     super.professionalId,
     super.professionalName,
     super.specialtyName,
+    super.finalValue,
+    super.discountPercentage,
   });
 
   /// Espera o join aninhado `professionals(name, specialty_id, specialties(name))`.
@@ -26,6 +28,8 @@ class ConsultationModel extends ConsultationEntity {
       professionalId: json['professional_id'] as String?,
       professionalName: prof?['name'] as String?,
       specialtyName: spec?['name'] as String?,
+      finalValue: (json['final_value'] as num?)?.toDouble(),
+      discountPercentage: (json['discount_percentage'] as num?)?.toDouble(),
     );
   }
 }
