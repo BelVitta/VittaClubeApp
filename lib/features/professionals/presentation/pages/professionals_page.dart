@@ -3,9 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/services/whatsapp_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
-import '../../../card/presentation/pages/card_page.dart';
+import '../../../../shared/widgets/app_navigation.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
-import '../../../profile/presentation/pages/profile_page.dart';
 import '../widgets/professional_card.dart';
 import '../widgets/specialty_filter_sheet.dart';
 
@@ -35,7 +34,7 @@ class ProfessionalsPage extends StatefulWidget {
 
 class _ProfessionalsPageState extends State<ProfessionalsPage> {
   String? _activeFilter;
-  int _currentNavIndex = 1;
+  static const int _currentNavIndex = AppNavigation.consultationsIndex;
 
   static const List<_ProfessionalData> _all = [
     _ProfessionalData(
@@ -108,23 +107,11 @@ class _ProfessionalsPageState extends State<ProfessionalsPage> {
   }
 
   void _onNavTap(int index) {
-    setState(() => _currentNavIndex = index);
-    Widget? next;
-    if (index == 0) {
-      Navigator.pop(context);
-      return;
-    } else if (index == 2) {
-      next = const CardPage();
-    } else if (index == 3) {
-      next = const ProfilePage();
-    }
-    if (next != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => next!)).then(
-        (_) {
-          if (mounted) setState(() => _currentNavIndex = 1);
-        },
-      );
-    }
+    AppNavigation.goToBottomNavIndex(
+      context,
+      index,
+      currentIndex: AppNavigation.consultationsIndex,
+    );
   }
 
   @override

@@ -4,9 +4,8 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/data/services/auth_session_manager.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
+import '../../../../shared/widgets/app_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
-import '../../../card/presentation/pages/card_page.dart';
-import '../../../professionals/presentation/pages/professionals_page.dart';
 import '../../../plans/presentation/pages/plans_page.dart';
 import '../widgets/profile_menu_item.dart';
 import '../widgets/profile_user_card.dart';
@@ -85,20 +84,12 @@ class ProfilePage extends StatelessWidget {
 
                 // Bottom Navigation
                 AppBottomNavigation(
-                  currentIndex: 3,
-                  onTap: (index) {
-                    if (index == 0) {
-                      Navigator.pop(context);
-                    } else if (index == 1) {
-                      Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ProfessionalsPage()));
-                    } else if (index == 2) {
-                      Navigator.pushReplacement(context,
-                          MaterialPageRoute(builder: (_) => const CardPage()));
-                    }
-                  },
+                  currentIndex: AppNavigation.profileIndex,
+                  onTap: (index) => AppNavigation.goToBottomNavIndex(
+                    context,
+                    index,
+                    currentIndex: AppNavigation.profileIndex,
+                  ),
                 ),
               ],
             ),
