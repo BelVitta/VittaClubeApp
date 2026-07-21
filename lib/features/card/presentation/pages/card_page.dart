@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
+import '../../../../shared/widgets/app_navigation.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
-import '../../../profile/presentation/pages/profile_page.dart';
-import '../../../professionals/presentation/pages/professionals_page.dart';
 import '../widgets/qr_code_sheet.dart';
 import '../widgets/transaction_item.dart';
 
@@ -22,7 +21,7 @@ class _CardPageState extends State<CardPage> {
   static const String _memberName = 'Diana Santos';
   static const String _memberCode = '53465123';
 
-  int _currentNavIndex = 2;
+  static const int _currentNavIndex = AppNavigation.cardIndex;
 
   final List<_Transaction> _transactions = const [
     _Transaction(
@@ -43,23 +42,11 @@ class _CardPageState extends State<CardPage> {
   ];
 
   void _onNavTap(int index) {
-    setState(() => _currentNavIndex = index);
-    Widget? next;
-    if (index == 0) {
-      Navigator.pop(context);
-      return;
-    } else if (index == 1) {
-      next = const ProfessionalsPage();
-    } else if (index == 3) {
-      next = const ProfilePage();
-    }
-    if (next != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => next!)).then(
-        (_) {
-          if (mounted) setState(() => _currentNavIndex = 2);
-        },
-      );
-    }
+    AppNavigation.goToBottomNavIndex(
+      context,
+      index,
+      currentIndex: AppNavigation.cardIndex,
+    );
   }
 
   @override
@@ -75,10 +62,8 @@ class _CardPageState extends State<CardPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _circleIconButton(
-                    icon: Icons.arrow_back,
-                    onTap: () => Navigator.pop(context),
-                  ),
+                  // Root tab: no back button (ALA-19). Keeps layout balance.
+                  const SizedBox(width: 39, height: 39),
                   Text(
                     'Carteirinha',
                     style: GoogleFonts.outfit(
