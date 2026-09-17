@@ -15,6 +15,7 @@ class RegisterUseCase {
     required String cpf,
     required String phone,
     required String password,
+    String? receptionistCode,
   }) {
     return repository.register(
       name: name,
@@ -22,6 +23,7 @@ class RegisterUseCase {
       cpf: cpf,
       phone: phone,
       password: password,
+      receptionistCode: receptionistCode,
     );
   }
 }

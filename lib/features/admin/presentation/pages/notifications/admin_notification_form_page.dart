@@ -28,13 +28,16 @@ class _AdminNotificationFormPageState extends State<AdminNotificationFormPage> {
   late final TextEditingController _bodyController;
   late final TextEditingController _triggerEventController;
   late bool _isActive;
-  String _selectedType = 'geral';
+  String _selectedType = 'sistema';
 
   static const _typeOptions = [
     DropdownItem(id: 'sorteio', displayName: 'Sorteio'),
     DropdownItem(id: 'cupom', displayName: 'Cupom'),
     DropdownItem(id: 'consulta', displayName: 'Consulta'),
-    DropdownItem(id: 'geral', displayName: 'Geral'),
+    DropdownItem(id: 'sistema', displayName: 'Sistema'),
+    DropdownItem(id: 'badge', displayName: 'Patente'),
+    DropdownItem(id: 'divulgacao', displayName: 'Divulgação'),
+    DropdownItem(id: 'profissional', displayName: 'Especialista'),
   ];
 
   bool get _isEditing => widget.entity != null;
@@ -44,7 +47,7 @@ class _AdminNotificationFormPageState extends State<AdminNotificationFormPage> {
     super.initState();
     _titleController = TextEditingController(text: widget.entity?.title ?? '');
     _bodyController = TextEditingController(text: widget.entity?.body ?? '');
-    _selectedType = widget.entity?.type ?? 'geral';
+    _selectedType = widget.entity?.type ?? 'sistema';
     _triggerEventController =
         TextEditingController(text: widget.entity?.triggerEvent ?? '');
     _isActive = widget.entity?.isActive ?? true;
@@ -90,13 +93,13 @@ class _AdminNotificationFormPageState extends State<AdminNotificationFormPage> {
         } else if (state.status == NotificationTemplateStatus.failure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage ?? 'Erro ao salvar notificacao'),
+              content: Text(state.errorMessage ?? 'Erro ao salvar notificação'),
             ),
           );
         }
       },
       child: AdminPageScaffold(
-        title: _isEditing ? 'Editar Notificacao' : 'Nova Notificacao',
+        title: _isEditing ? 'Editar notificação' : 'Nova notificação',
         floatingBottom: PrimaryButton(
           text: 'Salvar',
           onPressed: _handleSave,
@@ -108,38 +111,35 @@ class _AdminNotificationFormPageState extends State<AdminNotificationFormPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AdminFormField(
-                  label: 'Titulo',
+                  label: 'Título',
                   controller: _titleController,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Titulo obrigatorio' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Título obrigatório'
+                      : null,
                 ),
                 const SizedBox(height: 16),
-
                 AdminFormField(
                   label: 'Corpo',
                   controller: _bodyController,
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
-
                 AdminDropdownField(
                   label: 'Tipo',
                   value: _selectedType,
                   items: _typeOptions,
                   onChanged: (item) {
                     setState(() {
-                      _selectedType = item?.id ?? 'geral';
+                      _selectedType = item?.id ?? 'sistema';
                     });
                   },
                 ),
                 const SizedBox(height: 16),
-
                 AdminFormField(
                   label: 'Evento Gatilho',
                   controller: _triggerEventController,
                 ),
                 const SizedBox(height: 16),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -162,7 +162,6 @@ class _AdminNotificationFormPageState extends State<AdminNotificationFormPage> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 80),
               ],
             ),

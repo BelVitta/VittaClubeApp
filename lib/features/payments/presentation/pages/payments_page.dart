@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/whatsapp_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../plans/presentation/pages/plans_page.dart';
 import '../../../subscription/domain/entities/subscription_entity.dart';
-import '../../../subscription/domain/entities/subscription_status.dart';
 import '../../../subscription/presentation/bloc/subscription_bloc.dart';
 import '../../../subscription/presentation/bloc/subscription_event.dart';
 import '../../../subscription/presentation/bloc/subscription_state.dart';
+import '../../../subscription/presentation/widgets/subscription_status_cards.dart';
 import '../../domain/entities/payment_entity.dart';
 import '../bloc/payments_bloc.dart';
 import '../bloc/payments_event.dart';
@@ -106,35 +108,47 @@ class PaymentsPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
 
-                          // Plan info + quick actions (dependem da assinatura real)
+                          // Estado da assinatura (dependem da assinatura real)
                           BlocBuilder<SubscriptionBloc, SubscriptionState>(
                             builder: (context, state) {
                               if (state is SubscriptionLoading ||
                                   state is SubscriptionInitial) {
                                 return const Center(
                                   child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: 24),
+                                    padding: EdgeInsets.symmetric(vertical: 24),
                                     child: CircularProgressIndicator(),
                                   ),
                                 );
                               }
-                              if (state is! SubscriptionLoaded) {
-                                return _buildNoSubscriptionCard(context);
-                              }
+                              final subscription = state is SubscriptionLoaded
+                                  ? state.subscription
+                                  : null;
                               return Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildPlanInfoCard(
-                                      state.subscription),
-                                  const SizedBox(height: 12),
-                                  _buildQuickActions(
-                                      context, state.subscription),
+                                  SubscriptionStatusCards.forSubscription(
+                                    subscription: subscription,
+                                    onSubscribe: () => _goToPlans(context),
+                                    onOpenBank:
+                                        subscription?.paymentLinkUrl == null
+                                            ? null
+                                            : () => _openBank(context,
+                                                subscription!.paymentLinkUrl!),
+                                    onRefresh: () => context
+                                        .read<SubscriptionBloc>()
+                                        .add(const LoadCurrentSubscription()),
+                                    onRestore: () => _goToPlans(context),
+                                  ),
+                                  if (subscription != null) ...[
+                                    const SizedBox(height: 12),
+                                    _buildCancelAction(context, subscription),
+                                  ],
                                 ],
                               );
                             },
                           ),
+                          const SizedBox(height: 12),
+                          _buildSupportButton(context),
                           const SizedBox(height: 16),
 
                           // Payment history
@@ -163,179 +177,88 @@ class PaymentsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildNoSubscriptionCard(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEBEEF2)),
-      ),
-      child: Text(
-        'Você ainda não tem uma assinatura ativa.',
-        style: GoogleFonts.outfit(
-          fontSize: 13,
-          fontWeight: FontWeight.w400,
-          color: const Color(0xFF6D7F95),
-        ),
+  void _goToPlans(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PlansPage()),
+    ).then((_) {
+      if (context.mounted) {
+        context.read<SubscriptionBloc>().add(const LoadCurrentSubscription());
+      }
+    });
+  }
+
+  Future<void> _openBank(BuildContext context, String paymentLinkUrl) async {
+    final uri = Uri.parse(paymentLinkUrl);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!context.mounted || opened) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Não foi possível abrir o app do banco.')),
+    );
+  }
+
+  Future<void> _talkToSupport(BuildContext context) async {
+    final result = await WhatsAppLauncher.open(
+      presetMessage: 'Olá! Preciso de ajuda com o pagamento da minha '
+          'assinatura do Vita Clube.',
+    );
+    if (!context.mounted || result == WhatsAppLaunchResult.ok) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Não foi possível abrir o WhatsApp agora.'),
       ),
     );
   }
 
-  Widget _buildPlanInfoCard(SubscriptionEntity subscription) {
-    final nextDue = subscription.nextBillingDate ??
-        subscription.currentPeriodEnd ??
-        subscription.expirationDate;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEBEEF2)),
+  Widget _buildSupportButton(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () => _talkToSupport(context),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppTheme.primaryColor,
+        side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        minimumSize: const Size.fromHeight(0),
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    subscription.level.displayName,
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: (subscription.isActive
-                              ? const Color(0xFF249689)
-                              : const Color(0xFFE8872B))
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      subscription.isActive ? 'Ativo' : 'Inativo',
-                      style: GoogleFonts.outfit(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w500,
-                        color: subscription.isActive
-                            ? const Color(0xFF249689)
-                            : const Color(0xFFE8872B),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Divider(
-              height: 1,
-              color: const Color(0xFFEBEEF2).withValues(alpha: 0.5)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                subscription.pixStatus == PixAutomaticSubscriptionStatus.none
-                    ? 'Válido até:'
-                    : 'Próximo Vencimento:',
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFF6D7F95),
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-              Text(
-                nextDue == null
-                    ? '—'
-                    : DateFormat('dd/MM/yyyy').format(nextDue),
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ],
-          ),
-        ],
+      icon: const Icon(Icons.chat_outlined, size: 18),
+      label: Text(
+        'Falar com Suporte',
+        style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600),
       ),
     );
   }
 
-  Widget _buildQuickActions(
+  Widget _buildCancelAction(
     BuildContext context,
     SubscriptionEntity subscription,
   ) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionCard(
-            icon: Icons.credit_card,
-            label: subscription.pixStatus ==
-                    PixAutomaticSubscriptionStatus.none
-                ? 'Renovar'
-                : 'Pagar',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PlansPage()),
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: _buildActionCard(
-            icon: Icons.block,
-            label: 'Cancelar',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CancellationPage(
-                    subscriptionId: subscription.id,
-                    pixStatus: subscription.pixStatus,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CancellationPage(
+            subscriptionId: subscription.id,
+            pixStatus: subscription.pixStatus,
+          ),
+        ),
+      ),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFEBEEF2)),
         ),
-        child: Column(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 24, color: AppTheme.primaryColor),
-            const SizedBox(height: 6),
+            const Icon(Icons.block, size: 18, color: AppTheme.primaryColor),
+            const SizedBox(width: 6),
             Text(
-              label,
-              textAlign: TextAlign.center,
+              'Cancelar assinatura',
               style: GoogleFonts.outfit(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.primaryColor,
               ),

@@ -12,6 +12,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: ConsultationSchedulePage(
+          holderUserId: 'holder_1',
+          professionalName: 'Dra. Teste',
           subscription: _subscription(blocked: true),
         ),
       ),

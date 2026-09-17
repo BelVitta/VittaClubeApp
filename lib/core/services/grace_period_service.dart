@@ -35,6 +35,6 @@ class GracePeriodService {
   /// Mensagem sobre periodo de carencia
   String get gracePeriodMessage {
     if (!isInGracePeriod) return '';
-    return 'Seu plano esta em carencia. Faltam $remainingGraceDays dia(s) para liberar todos os beneficios.';
+    return 'Seu plano está em carência. Faltam $remainingGraceDays dia(s) para liberar todos os benefícios.';
   }
 }

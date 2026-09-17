@@ -52,7 +52,7 @@ class QrValidationBloc extends Bloc<QrValidationEvent, QrValidationState> {
     emit(state.copyWith(status: QrValidationStatus.loading));
     final result = await validateMemberQrUseCase(
       ValidateMemberQrParams(
-        userId: event.userId,
+        identifier: event.identifier,
         actorUserId: event.actorUserId,
       ),
     );

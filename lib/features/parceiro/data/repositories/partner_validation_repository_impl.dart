@@ -12,7 +12,8 @@ class PartnerValidationRepositoryImpl implements PartnerValidationRepository {
   PartnerValidationRepositoryImpl({required this.dataSource});
 
   @override
-  Future<Either<Failure, List<PartnerValidationEntity>>> getByPartnerId(String partnerId) async {
+  Future<Either<Failure, List<PartnerValidationEntity>>> getByPartnerId(
+      String partnerId) async {
     try {
       final result = await dataSource.getValidationsByPartnerId(partnerId);
       return Right(result);
@@ -49,6 +50,38 @@ class PartnerValidationRepositoryImpl implements PartnerValidationRepository {
   Future<Either<Failure, String>> generateToken(String userId) async {
     try {
       final result = await dataSource.generateToken(userId);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure('Erro inesperado: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> confirmValidation({
+    required String holderUserId,
+    required String memberName,
+    String? dependentId,
+    double? originalValue,
+    String? planLevel,
+  }) async {
+    try {
+      final result = await dataSource.confirmPartnerValidation(
+        holderUserId: holderUserId,
+        memberName: memberName,
+        dependentId: dependentId,
+        originalValue: originalValue,
+        planLevel: planLevel,
+      );
+      if (result['ok'] == false) {
+        final msg = result['message']?.toString();
+        return Left(ServerFailure(
+          (msg == null || msg.isEmpty)
+              ? 'Não foi possível confirmar a validação.'
+              : msg,
+        ));
+      }
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

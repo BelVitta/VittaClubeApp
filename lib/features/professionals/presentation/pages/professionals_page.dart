@@ -1,18 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
-import '../../../../core/services/whatsapp_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_navigation.dart';
-import '../../../notifications/presentation/pages/notifications_page.dart';
+import '../../../consultation/presentation/pages/consultation_schedule_page.dart';
 import '../../domain/entities/professional_entity.dart';
 import '../bloc/professionals_bloc.dart';
 import '../bloc/professionals_event.dart';
 import '../bloc/professionals_state.dart';
 import '../widgets/professional_card.dart';
 import '../widgets/specialty_filter_sheet.dart';
+
+const _weekdayLabels = {
+  'seg': 'Seg',
+  'ter': 'Ter',
+  'qua': 'Qua',
+  'qui': 'Qui',
+  'sex': 'Sex',
+  'sab': 'Sáb',
+  'dom': 'Dom',
+};
+
+/// [ProfessionalEntity.availabilityNote] tem prioridade quando preenchida
+/// (casos que não cabem num conjunto de dias da semana, ex: "1x por mês").
+String _formatAvailability(ProfessionalEntity p) {
+  final note = p.availabilityNote?.trim();
+  if (note != null && note.isNotEmpty) return note;
+  return p.availableDays
+      .split(',')
+      .map((d) => _weekdayLabels[d.trim().toLowerCase()] ?? d.trim())
+      .where((d) => d.isNotEmpty)
+      .join(', ');
+}
 
 /// Página de lista de profissionais com filtro por especialidade.
 class ProfessionalsPage extends StatelessWidget {
@@ -43,31 +65,23 @@ class _ProfessionalsViewState extends State<_ProfessionalsView> {
     return all.where((p) => p.specialtyName == _activeFilter).toList();
   }
 
-  Future<void> _openWhatsApp(String professionalName) async {
-    final result = await WhatsAppLauncher.open(
-      presetMessage:
-          'Olá! Gostaria de agendar uma consulta com $professionalName pelo Vita Clube.',
-    );
-    if (!mounted) return;
-    switch (result) {
-      case WhatsAppLaunchResult.ok:
-        break;
-      case WhatsAppLaunchResult.missingNumber:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Número da clínica ainda não foi configurado. Peça ao administrador.',
-            ),
-          ),
-        );
-      case WhatsAppLaunchResult.launchFailed:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Não foi possível abrir o WhatsApp neste dispositivo.'),
-          ),
-        );
+  void _openSchedule(String professionalName) {
+    final holderUserId = SupabaseConfig.client.auth.currentUser?.id;
+    if (holderUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Faça login para agendar.')),
+      );
+      return;
     }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ConsultationSchedulePage(
+          holderUserId: holderUserId,
+          professionalName: professionalName,
+        ),
+      ),
+    );
   }
 
   Future<void> _openFilter(List<String> specialties) async {
@@ -106,27 +120,6 @@ class _ProfessionalsViewState extends State<_ProfessionalsView> {
                       fontWeight: FontWeight.w400,
                       color: const Color(0xFF031535),
                       letterSpacing: 0.12,
-                    ),
-                  ),
-                  Container(
-                    width: 39,
-                    height: 39,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF01225B).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(19.5),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.notifications_outlined,
-                        size: 19,
-                        color: Color(0xFF01225B),
-                      ),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const NotificationsPage()),
-                      ),
-                      padding: EdgeInsets.zero,
                     ),
                   ),
                 ],
@@ -227,11 +220,11 @@ class _ProfessionalsViewState extends State<_ProfessionalsView> {
                                   return ProfessionalCard(
                                     name: p.name,
                                     specialty: p.specialtyName,
-                                    availableDays: p.availableDays,
+                                    availableDays: _formatAvailability(p),
                                     avatarBgColor: Color(p.avatarBgColor),
                                     avatarUrl: p.avatarUrl,
                                     isLarge: true,
-                                    onWhatsApp: () => _openWhatsApp(p.name),
+                                    onWhatsApp: () => _openSchedule(p.name),
                                   );
                                 },
                               ),

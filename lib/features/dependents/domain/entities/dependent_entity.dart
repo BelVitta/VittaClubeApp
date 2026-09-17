@@ -11,6 +11,7 @@ class DependentEntity extends Equatable {
   final String relationship;
   final DependentStatus status;
   final DateTime createdAt;
+  final String? rejectionReason;
 
   const DependentEntity({
     required this.id,
@@ -21,9 +22,11 @@ class DependentEntity extends Equatable {
     required this.relationship,
     required this.status,
     required this.createdAt,
+    this.rejectionReason,
   });
 
   bool get isActive => status == DependentStatus.active;
+  bool get isPending => status == DependentStatus.pending;
 
   @override
   List<Object?> get props => [
@@ -35,5 +38,6 @@ class DependentEntity extends Equatable {
         relationship,
         status,
         createdAt,
+        rejectionReason,
       ];
 }

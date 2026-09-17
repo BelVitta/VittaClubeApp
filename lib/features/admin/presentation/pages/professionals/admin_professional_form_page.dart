@@ -24,17 +24,29 @@ class AdminProfessionalFormPage extends StatefulWidget {
   bool get isEditing => entity != null;
 
   @override
-  State<AdminProfessionalFormPage> createState() => _AdminProfessionalFormPageState();
+  State<AdminProfessionalFormPage> createState() =>
+      _AdminProfessionalFormPageState();
 }
 
 class _AdminProfessionalFormPageState extends State<AdminProfessionalFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late final TextEditingController _availableDaysController;
+  late final TextEditingController _availabilityNoteController;
   late final TextEditingController _avatarUrlController;
   late final TextEditingController _whatsappNumberController;
   late bool _isActive;
 
+  static const _weekdayOptions = [
+    ('seg', 'Seg'),
+    ('ter', 'Ter'),
+    ('qua', 'Qua'),
+    ('qui', 'Qui'),
+    ('sex', 'Sex'),
+    ('sab', 'Sáb'),
+    ('dom', 'Dom'),
+  ];
+
+  final Set<String> _selectedDays = {};
   String? _selectedSpecialtyId;
   String _selectedSpecialtyName = '';
   List<SpecialtyEntity> _specialties = [];
@@ -43,10 +55,9 @@ class _AdminProfessionalFormPageState extends State<AdminProfessionalFormPage> {
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.entity?.name ?? '');
-    _availableDaysController =
-        TextEditingController(text: widget.entity?.availableDays ?? '');
+    _nameController = TextEditingController(text: widget.entity?.name ?? '');
+    _availabilityNoteController =
+        TextEditingController(text: widget.entity?.availabilityNote ?? '');
     _avatarUrlController =
         TextEditingController(text: widget.entity?.avatarUrl ?? '');
     _whatsappNumberController =
@@ -54,6 +65,13 @@ class _AdminProfessionalFormPageState extends State<AdminProfessionalFormPage> {
     _isActive = widget.entity?.isActive ?? true;
     _selectedSpecialtyId = widget.entity?.specialtyId;
     _selectedSpecialtyName = widget.entity?.specialtyName ?? '';
+    final knownCodes = _weekdayOptions.map((d) => d.$1).toSet();
+    _selectedDays.addAll(
+      (widget.entity?.availableDays ?? '')
+          .split(',')
+          .map((d) => d.trim().toLowerCase())
+          .where(knownCodes.contains),
+    );
     _loadSpecialties();
   }
 
@@ -73,7 +91,7 @@ class _AdminProfessionalFormPageState extends State<AdminProfessionalFormPage> {
   @override
   void dispose() {
     _nameController.dispose();
-    _availableDaysController.dispose();
+    _availabilityNoteController.dispose();
     _avatarUrlController.dispose();
     _whatsappNumberController.dispose();
     super.dispose();
@@ -82,12 +100,19 @@ class _AdminProfessionalFormPageState extends State<AdminProfessionalFormPage> {
   void _handleSave() {
     if (!_formKey.currentState!.validate()) return;
 
+    final orderedDays = _weekdayOptions
+        .map((d) => d.$1)
+        .where(_selectedDays.contains)
+        .join(', ');
+    final note = _availabilityNoteController.text.trim();
+
     final entity = ProfessionalEntity(
       id: widget.entity?.id ?? '',
       name: _nameController.text.trim(),
       specialtyId: _selectedSpecialtyId ?? '',
       specialtyName: _selectedSpecialtyName,
-      availableDays: _availableDaysController.text.trim(),
+      availableDays: orderedDays,
+      availabilityNote: note.isEmpty ? null : note,
       avatarUrl: _avatarUrlController.text.trim(),
       avatarBgColor: widget.entity?.avatarBgColor ?? 0xFFFFCD66,
       whatsappNumber: _whatsappNumberController.text.trim(),
@@ -109,8 +134,7 @@ class _AdminProfessionalFormPageState extends State<AdminProfessionalFormPage> {
           Navigator.pop(context);
         } else if (state.status == ProfessionalStatus.failure) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(state.errorMessage ?? 'Erro ao salvar')),
+            SnackBar(content: Text(state.errorMessage ?? 'Erro ao salvar')),
           );
         }
       },
@@ -126,8 +150,9 @@ class _AdminProfessionalFormPageState extends State<AdminProfessionalFormPage> {
                     AdminFormField(
                       label: 'Nome',
                       controller: _nameController,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Nome obrigatorio' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Nome obrigatório'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     if (_loadingSpecialties)
@@ -154,9 +179,68 @@ class _AdminProfessionalFormPageState extends State<AdminProfessionalFormPage> {
                         },
                       ),
                     const SizedBox(height: 16),
+                    Text(
+                      'Dias de Atendimento',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _weekdayOptions.map((day) {
+                        final code = day.$1;
+                        final label = day.$2;
+                        final isSelected = _selectedDays.contains(code);
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedDays.remove(code);
+                              } else {
+                                _selectedDays.add(code);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppTheme.primaryColor
+                                  : const Color(0xFFF5F6FA),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primaryColor
+                                    : const Color(0xFFE0E4EC),
+                              ),
+                            ),
+                            child: Text(
+                              label,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF6D7F95),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
                     AdminFormField(
-                      label: 'Dias Disponiveis',
-                      controller: _availableDaysController,
+                      label: 'Observação de Disponibilidade (opcional)',
+                      controller: _availabilityNoteController,
+                      maxLines: 2,
+                      maxLength: 80,
+                      hintText: 'Deixe em branco para os dias marcados acima. '
+                          'Preencha só em exceções, ex: atende 1x por mês',
                     ),
                     const SizedBox(height: 16),
                     AdminFormField(

@@ -39,7 +39,8 @@ class _PartnerServiceFormPageState extends State<PartnerServiceFormPage> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.entity?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.entity?.description ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.entity?.description ?? '');
     _originalPriceController = TextEditingController(
       text: widget.entity?.originalPrice.toStringAsFixed(2) ?? '',
     );
@@ -70,9 +71,13 @@ class _PartnerServiceFormPageState extends State<PartnerServiceFormPage> {
     );
 
     if (widget.isEditing) {
-      context.read<PartnerServiceBloc>().add(UpdatePartnerServiceRequested(entity));
+      context
+          .read<PartnerServiceBloc>()
+          .add(UpdatePartnerServiceRequested(entity));
     } else {
-      context.read<PartnerServiceBloc>().add(CreatePartnerServiceRequested(entity));
+      context
+          .read<PartnerServiceBloc>()
+          .add(CreatePartnerServiceRequested(entity));
     }
   }
 
@@ -89,7 +94,7 @@ class _PartnerServiceFormPageState extends State<PartnerServiceFormPage> {
         }
       },
       child: AdminPageScaffold(
-        title: widget.isEditing ? 'Editar Servico' : 'Novo Servico',
+        title: widget.isEditing ? 'Editar serviço' : 'Novo serviço',
         body: Column(
           children: [
             AdminFormCard(
@@ -101,7 +106,7 @@ class _PartnerServiceFormPageState extends State<PartnerServiceFormPage> {
                   ),
                   const SizedBox(height: 16),
                   AdminFormField(
-                    label: 'Descricao',
+                    label: 'Descrição',
                     controller: _descriptionController,
                   ),
                   const SizedBox(height: 16),

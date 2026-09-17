@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/app_theme.dart';
 
-/// Página de configurações de Notificações Push
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../notifications/domain/entities/notification_preferences_entity.dart';
+import '../../../notifications/domain/usecases/get_notification_preferences_usecase.dart';
+import '../../../notifications/domain/usecases/update_notification_preferences_usecase.dart';
+
+/// Preferências de categorias de notificação (persistidas no Supabase).
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
 
@@ -12,10 +17,45 @@ class NotificationSettingsPage extends StatefulWidget {
 }
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
-  bool _sorteios = true;
-  bool _rankings = true;
-  bool _pagamentos = true;
-  bool _novidades = true;
+  NotificationPreferencesEntity _prefs = const NotificationPreferencesEntity();
+  bool _loading = true;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final result = await sl<GetNotificationPreferencesUseCase>()();
+    if (!mounted) return;
+    result.fold(
+      (_) => setState(() => _loading = false),
+      (prefs) => setState(() {
+        _prefs = prefs;
+        _loading = false;
+      }),
+    );
+  }
+
+  Future<void> _save(NotificationPreferencesEntity next) async {
+    setState(() {
+      _prefs = next;
+      _saving = true;
+    });
+    final result = await sl<UpdateNotificationPreferencesUseCase>()(next);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    result.fold(
+      (failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(failure.message)),
+        );
+      },
+      (saved) => setState(() => _prefs = saved),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +64,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Background gradient circle
             Positioned(
               top: -16,
               right: -180,
@@ -43,10 +82,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 ),
               ),
             ),
-
             Column(
               children: [
-                // Back button
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Row(
@@ -71,45 +108,50 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
-                // Content
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        Text(
-                          'Notificações',
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
+                  child: _loading
+                      ? const Center(
+                          child: CircularProgressIndicator(
                             color: AppTheme.primaryColor,
-                            letterSpacing: 0.12,
+                          ),
+                        )
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Notificações',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.primaryColor,
+                                  letterSpacing: 0.12,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Escolha o que deseja receber',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.primaryColor,
+                                  letterSpacing: 0.075,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              _buildToggleCard(),
+                              if (_saving)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 12),
+                                  child: LinearProgressIndicator(
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 6),
-
-                        // Subtitle
-                        Text(
-                          'Notificações Push',
-                          style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.primaryColor,
-                            letterSpacing: 0.075,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-
-                        // Toggle cards
-                        _buildToggleCard(),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -133,26 +175,26 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           _buildToggleItem(
             title: 'Sorteios',
             subtitle: 'Novos sorteios e resultados',
-            value: _sorteios,
-            onChanged: (v) => setState(() => _sorteios = v),
+            value: _prefs.sorteios,
+            onChanged: (v) => _save(_prefs.copyWith(sorteios: v)),
           ),
           _buildToggleItem(
             title: 'Rankings',
             subtitle: 'Atualizações de posição',
-            value: _rankings,
-            onChanged: (v) => setState(() => _rankings = v),
+            value: _prefs.rankings,
+            onChanged: (v) => _save(_prefs.copyWith(rankings: v)),
           ),
           _buildToggleItem(
             title: 'Pagamentos',
             subtitle: 'Cobranças e recibos',
-            value: _pagamentos,
-            onChanged: (v) => setState(() => _pagamentos = v),
+            value: _prefs.pagamentos,
+            onChanged: (v) => _save(_prefs.copyWith(pagamentos: v)),
           ),
           _buildToggleItem(
             title: 'Novidades',
-            subtitle: 'Dicas e promoções',
-            value: _novidades,
-            onChanged: (v) => setState(() => _novidades = v),
+            subtitle: 'Dicas, especialistas e promoções',
+            value: _prefs.novidades,
+            onChanged: (v) => _save(_prefs.copyWith(novidades: v)),
             showDivider: false,
           ),
         ],
@@ -198,7 +240,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               ),
               Switch(
                 value: value,
-                onChanged: onChanged,
+                onChanged: _saving ? null : onChanged,
                 activeThumbColor: Colors.white,
                 activeTrackColor: AppTheme.primaryColor,
                 inactiveThumbColor: Colors.white,

@@ -34,6 +34,17 @@ Deno.serve(async (request) => {
     return errorResponse("Method not allowed", 405);
   }
 
+  const webhookSecret = Deno.env.get("INFINITYPAY_WEBHOOK_SECRET");
+  if (webhookSecret && webhookSecret.length > 0) {
+    const provided = request.headers.get("x-webhook-secret") ??
+      request.headers.get("authorization") ??
+      "";
+    const token = provided.replace(/^Bearer\s+/i, "").trim();
+    if (token !== webhookSecret) {
+      return errorResponse("Webhook nao autorizado.", 401);
+    }
+  }
+
   let payload: Record<string, unknown>;
   try {
     payload = await request.json();
@@ -165,6 +176,27 @@ async function processInfinityPayWebhook(
       .eq("id", paymentIntent.id);
 
     return { paid: false, intentId: paymentIntent.id };
+  }
+
+  // Never trust the amount supplied by the client-side intent. Reconcile the
+  // provider result with the server-side plan price before activating access.
+  const { data: plan, error: planError } = await client
+    .from("plans")
+    .select("price, is_active")
+    .eq("id", paymentIntent.plan_id)
+    .maybeSingle();
+  if (planError || !plan || !plan.is_active) {
+    throw new Error("Plano inválido ou inativo para a intenção de pagamento.");
+  }
+  const expectedCents = Math.round(Number(plan.price) * 100);
+  const paidAmount = paymentCheck.paid_amount ?? paymentCheck.amount;
+  const normalizedPaidAmount = paidAmount == null ? null : Number(paidAmount);
+  const amountMatches = normalizedPaidAmount != null && (
+    Math.round(normalizedPaidAmount) === expectedCents ||
+    Math.round(normalizedPaidAmount * 100) === expectedCents
+  );
+  if (!amountMatches) {
+    throw new Error("Valor pago não corresponde ao preço atual do plano.");
   }
 
   if (paymentIntent.status === "paid" && paymentIntent.subscription_id) {

@@ -1,79 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../domain/entities/notification_entity.dart';
+import '../bloc/notifications_bloc.dart';
+import '../bloc/notifications_event.dart';
+import '../bloc/notifications_state.dart';
+import '../notification_router.dart';
 import '../widgets/notification_item.dart';
 
-/// Entidade local para representar uma notificação
-class _NotificationData {
-  final String id;
-  final String title;
-  final String subtitle;
-  bool isUnread;
-
-  _NotificationData({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    this.isUnread = false,
-  });
-}
-
-/// Página de feed de Notificações
-class NotificationsPage extends StatefulWidget {
+/// Caixa de entrada de notificações in-app.
+class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
 
   @override
-  State<NotificationsPage> createState() => _NotificationsPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<NotificationsBloc>()..add(const LoadNotifications()),
+      child: const _NotificationsView(),
+    );
+  }
 }
 
-class _NotificationsPageState extends State<NotificationsPage> {
-  final List<_NotificationData> _notifications = [
-    _NotificationData(
-      id: '1',
-      title: 'Novo Sorteio Disponível',
-      subtitle: 'Participe do novo sorteio e concorra a prêmios!',
-      isUnread: true,
-    ),
-    _NotificationData(
-      id: '2',
-      title: 'Novo cupom ganho!',
-      subtitle: 'Você ganhou um cupom de desconto. Confira!',
-      isUnread: true,
-    ),
-    _NotificationData(
-      id: '3',
-      title: 'Consulta Amanhã',
-      subtitle: 'Lembrete: sua consulta é amanhã às 10h.',
-    ),
-    _NotificationData(
-      id: '4',
-      title: 'Novo Sorteio Disponível',
-      subtitle: 'Participe do novo sorteio e concorra a prêmios!',
-    ),
-    _NotificationData(
-      id: '5',
-      title: 'Novo cupom ganho!',
-      subtitle: 'Você ganhou um cupom de desconto. Confira!',
-    ),
-    _NotificationData(
-      id: '6',
-      title: 'Consulta Amanhã',
-      subtitle: 'Lembrete: sua consulta é amanhã às 10h.',
-    ),
-  ];
+class _NotificationsView extends StatelessWidget {
+  const _NotificationsView();
 
-  void _markAllAsRead() {
-    setState(() {
-      for (final n in _notifications) {
-        n.isUnread = false;
-      }
-    });
-  }
-
-  void _deleteNotification(String id) {
-    setState(() {
-      _notifications.removeWhere((n) => n.id == id);
-    });
+  void _open(BuildContext context, NotificationEntity notification) {
+    context
+        .read<NotificationsBloc>()
+        .add(MarkNotificationReadRequested(notification.id));
+    NotificationRouter.open(
+      notification.action,
+      professionalName: notification.professionalName,
+      context: context,
+    );
   }
 
   @override
@@ -83,7 +45,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Background gradient circle
             Positioned(
               top: -16,
               right: -180,
@@ -102,10 +63,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 ),
               ),
             ),
-
             Column(
               children: [
-                // Back button
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Row(
@@ -130,89 +89,122 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
-                // Content
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        Text(
-                          'Notificações',
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
+                  child: BlocBuilder<NotificationsBloc, NotificationsState>(
+                    builder: (context, state) {
+                      if (state.status == NotificationsStatus.loading) {
+                        return const Center(
+                          child: CircularProgressIndicator(
                             color: AppTheme.primaryColor,
-                            letterSpacing: 0.12,
                           ),
-                        ),
-                        const SizedBox(height: 12),
+                        );
+                      }
 
-                        // Mark all as read button
-                        if (_notifications.any((n) => n.isUnread))
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: GestureDetector(
-                              onTap: _markAllAsRead,
-                              child: Container(
-                                width: double.infinity,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(
-                                    color: AppTheme.primaryColor,
-                                    width: 1,
-                                  ),
+                      if (state.status == NotificationsStatus.failure) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              state.errorMessage ??
+                                  'Não foi possível carregar as notificações.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                color: const Color(0xFF6D7F95),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return RefreshIndicator(
+                        color: AppTheme.primaryColor,
+                        onRefresh: () async {
+                          context
+                              .read<NotificationsBloc>()
+                              .add(const LoadNotifications());
+                        },
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Notificações',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.primaryColor,
+                                  letterSpacing: 0.12,
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    'Marcar todas como lida',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.primaryColor,
+                              ),
+                              const SizedBox(height: 12),
+                              if (state.hasUnread)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      context.read<NotificationsBloc>().add(
+                                            const MarkAllNotificationsReadRequested(),
+                                          );
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(24),
+                                        border: Border.all(
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'Marcar todas como lida',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-
-                        // Notification list
-                        ..._notifications.map((notification) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: NotificationItem(
-                                title: notification.title,
-                                subtitle: notification.subtitle,
-                                isUnread: notification.isUnread,
-                                onDelete: () =>
-                                    _deleteNotification(notification.id),
-                              ),
-                            )),
-
-                        if (_notifications.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 48),
-                            child: Center(
-                              child: Text(
-                                'Nenhuma notificação',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: const Color(0xFF6D7F95),
+                              if (state.items.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 48),
+                                  child: Center(
+                                    child: Text(
+                                      'Nenhuma notificação',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
+                                        color: const Color(0xFF6D7F95),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else
+                                ...state.items.map(
+                                  (notification) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: NotificationItem(
+                                      title: notification.title,
+                                      subtitle: notification.body,
+                                      isUnread: !notification.isRead,
+                                      onTap: () => _open(context, notification),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
+                              const SizedBox(height: 32),
+                            ],
                           ),
-
-                        const SizedBox(height: 32),
-                      ],
-                    ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],

@@ -1,9 +1,12 @@
 import 'package:dartz/dartz.dart';
 
+import '../../../../core/error/exceptions.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/error/rate_limit.dart';
 import '../../domain/entities/dependent_appointment_entity.dart';
 import '../../domain/entities/dependent_entity.dart';
 import '../../domain/entities/dependent_enums.dart';
+import '../../domain/entities/pending_dependent_entity.dart';
 import '../../domain/entities/usage_record_entity.dart';
 import '../../domain/repositories/dependent_appointment_repository.dart';
 import '../../domain/repositories/dependents_repository.dart';
@@ -88,6 +91,55 @@ class DependentsRepositoryImpl implements DependentsRepository {
   Future<Either<Failure, bool>> activeCpfExists(String cpf) async {
     try {
       return Right(await dataSource.activeCpfExists(cpf));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<PendingDependentEntity>>>
+      getPendingDependents() async {
+    try {
+      final rows = await dataSource.getPendingDependents();
+      return Right(rows
+          .map((row) => PendingDependentEntity(
+                dependent: DependentModel.fromJson(row),
+                holderName: row['holder_name'] as String? ?? '',
+                holderEmail: row['holder_email'] as String? ?? '',
+              ))
+          .toList());
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> approveDependent({
+    required String dependentId,
+  }) async {
+    try {
+      await dataSource.updateDependentStatus(
+        dependentId: dependentId,
+        status: 'active',
+      );
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> rejectDependent({
+    required String dependentId,
+    required String reason,
+  }) async {
+    try {
+      await dataSource.updateDependentStatus(
+        dependentId: dependentId,
+        status: 'inactive',
+        rejectionReason: reason,
+      );
+      return const Right(unit);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -179,8 +231,12 @@ class QrValidationRepositoryImpl implements QrValidationRepository {
         establishmentId: establishmentId,
       );
       return Right(QrValidationResultModel.fromJson(row));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure(
+        RateLimitMessages.messageOrNull(e) ?? e.toString(),
+      ));
     }
   }
 }

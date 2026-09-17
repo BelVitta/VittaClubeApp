@@ -7,19 +7,30 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_navigation.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../domain/loyalty_card_payload.dart';
 import '../../../consultation/presentation/bloc/consultation_bloc.dart';
+import '../../../dependents/domain/entities/dependent_entity.dart';
+import '../../../dependents/domain/entities/dependent_enums.dart';
+import '../../../dependents/domain/services/dependent_cycle_service.dart';
+import '../../../dependents/domain/usecases/get_dependents_usecase.dart';
 import '../../../consultation/presentation/bloc/consultation_event.dart';
 import '../../../consultation/presentation/bloc/consultation_state.dart';
-import '../../../notifications/presentation/pages/notifications_page.dart';
+import '../../../plans/presentation/pages/plans_page.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_event.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../subscription/domain/entities/subscription_entity.dart';
+import '../../../subscription/presentation/bloc/subscription_bloc.dart';
+import '../../../subscription/presentation/bloc/subscription_event.dart';
+import '../../../subscription/presentation/bloc/subscription_state.dart';
 import '../../../subscription/presentation/widgets/restore_account_modal.dart';
 import '../widgets/qr_code_sheet.dart';
 import '../widgets/transaction_item.dart';
 
 /// Página da Carteirinha Digital VitaClube.
+///
+/// [subscription] é opcional (útil em testes). Em produção a bottom nav abre
+/// sem parâmetro e a página carrega a assinatura via [SubscriptionBloc].
 class CardPage extends StatefulWidget {
   final SubscriptionEntity? subscription;
 
@@ -31,6 +42,9 @@ class CardPage extends StatefulWidget {
 
 class _CardPageState extends State<CardPage> {
   final int _currentNavIndex = 2;
+  DependentEntity? _selectedDependent;
+  List<DependentEntity> _activeDependents = const [];
+  bool _dependentsLoaded = false;
 
   void _onNavTap(int index) => AppNavigation.goToBottomNavIndex(
         context,
@@ -49,6 +63,11 @@ class _CardPageState extends State<CardPage> {
           create: (_) =>
               sl<ConsultationBloc>()..add(const LoadUserConsultations()),
         ),
+        // Sempre carrega a assinatura real — não confiar em default `?? true`.
+        BlocProvider(
+          create: (_) =>
+              sl<SubscriptionBloc>()..add(const LoadCurrentSubscription()),
+        ),
       ],
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -63,7 +82,17 @@ class _CardPageState extends State<CardPage> {
                   children: [
                     _circleIconButton(
                       icon: Icons.arrow_back,
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.pop(context);
+                        } else {
+                          AppNavigation.goToBottomNavIndex(
+                            context,
+                            AppNavigation.homeIndex,
+                            currentIndex: _currentNavIndex,
+                          );
+                        }
+                      },
                     ),
                     Text(
                       'Carteirinha',
@@ -73,14 +102,7 @@ class _CardPageState extends State<CardPage> {
                         color: AppTheme.primaryColor,
                       ),
                     ),
-                    _circleIconButton(
-                      icon: Icons.notifications_outlined,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const NotificationsPage()),
-                      ),
-                    ),
+                    const SizedBox(width: 39, height: 39),
                   ],
                 ),
               ),
@@ -90,40 +112,42 @@ class _CardPageState extends State<CardPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: BlocBuilder<ProfileBloc, ProfileState>(
                     builder: (context, state) {
-                      final memberName = switch (state) {
-                        ProfileLoaded(profile: final p) => p.name,
-                        _ => '',
-                      };
-                      final memberCode = switch (state) {
-                        ProfileLoaded(profile: final p) => p.id,
-                        _ => '',
-                      };
+                      final profile =
+                          state is ProfileLoaded ? state.profile : null;
+                      final memberName = profile?.name ?? '';
+                      // QR continua com UUID; display usa member_code curto.
+                      final holderId = profile?.id ?? '';
+                      if (profile != null && !_dependentsLoaded) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _loadDependents(profile.id);
+                        });
+                      }
+                      final qrPayload = _selectedDependent == null
+                          ? LoyaltyCardPayload.holder(holderId)
+                          : LoyaltyCardPayload.dependent(
+                              _selectedDependent!.id,
+                            );
+                      final memberCodeDisplay =
+                          profile?.memberCodeDisplay ?? '—';
+                      final memberCodeRaw = profile?.memberCode;
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildCard(memberName, memberCode),
+                          _buildCard(
+                            memberName: _selectedDependent?.name ?? memberName,
+                            memberCodeDisplay: memberCodeDisplay,
+                            isDependent: _selectedDependent != null,
+                            relationship: _selectedDependent?.relationship,
+                          ),
+                          if (_activeDependents.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _buildBeneficiaryChips(memberName),
+                          ],
                           const SizedBox(height: 16),
-                          Builder(
-                            builder: (context) {
-                              final canQr =
-                                  widget.subscription?.canUseQr ?? true;
-                              if (!canQr) {
-                                return PrimaryButton(
-                                  text: 'Restaurar conta para usar QR',
-                                  onPressed: () =>
-                                      RestoreAccountModal.show(context),
-                                );
-                              }
-                              return PrimaryButton(
-                                text: 'Mostrar QR Code',
-                                onPressed: memberCode.isEmpty
-                                    ? null
-                                    : () => QrCodeSheet.show(
-                                          context,
-                                          memberCode: memberCode,
-                                        ),
-                              );
-                            },
+                          _buildQrAction(
+                            qrPayload: qrPayload,
+                            memberCodeDisplay: memberCodeDisplay,
+                            memberCodeRaw: memberCodeRaw,
                           ),
                           const SizedBox(height: 24),
                           Text(
@@ -155,7 +179,178 @@ class _CardPageState extends State<CardPage> {
     );
   }
 
-  Widget _buildCard(String memberName, String memberCode) {
+  /// Resolve se o QR pode ser usado: parâmetro de teste **ou** estado do BLoC.
+  Widget _buildQrAction({
+    required String qrPayload,
+    required String memberCodeDisplay,
+    required String? memberCodeRaw,
+  }) {
+    // Caminho de teste / caller explícito com subscription injetada.
+    if (widget.subscription != null) {
+      return _qrButtonFromAccess(
+        canUseQr: widget.subscription!.canUseQr,
+        hasSubscription: true,
+        qrPayload: qrPayload,
+        memberCodeDisplay: memberCodeDisplay,
+        memberCodeRaw: memberCodeRaw,
+        loading: false,
+      );
+    }
+
+    return BlocBuilder<SubscriptionBloc, SubscriptionState>(
+      builder: (context, subState) {
+        if (subState is SubscriptionLoading ||
+            subState is SubscriptionInitial) {
+          return _qrButtonFromAccess(
+            canUseQr: false,
+            hasSubscription: false,
+            qrPayload: qrPayload,
+            memberCodeDisplay: memberCodeDisplay,
+            memberCodeRaw: memberCodeRaw,
+            loading: true,
+          );
+        }
+
+        if (subState is SubscriptionLoaded) {
+          return _qrButtonFromAccess(
+            canUseQr: subState.subscription.canUseQr,
+            hasSubscription: true,
+            qrPayload: qrPayload,
+            memberCodeDisplay: memberCodeDisplay,
+            memberCodeRaw: memberCodeRaw,
+            loading: false,
+          );
+        }
+
+        // NoSubscription ou SubscriptionError → sem QR.
+        return _qrButtonFromAccess(
+          canUseQr: false,
+          hasSubscription: false,
+          qrPayload: qrPayload,
+          memberCodeDisplay: memberCodeDisplay,
+          memberCodeRaw: memberCodeRaw,
+          loading: false,
+        );
+      },
+    );
+  }
+
+  Widget _qrButtonFromAccess({
+    required bool canUseQr,
+    required bool hasSubscription,
+    required String qrPayload,
+    required String memberCodeDisplay,
+    required String? memberCodeRaw,
+    required bool loading,
+  }) {
+    if (loading) {
+      return const SizedBox(
+        height: 48,
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    if (!canUseQr) {
+      final isSubscribe = !hasSubscription;
+      return PrimaryButton(
+        text: isSubscribe
+            ? 'Assinar para usar o QR'
+            : 'Restaurar conta para usar QR',
+        onPressed: () {
+          if (isSubscribe) {
+            RestoreAccountModal.showSubscribe(
+              context,
+              onSubscribe: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PlansPage()),
+                );
+              },
+            );
+          } else {
+            RestoreAccountModal.showReactivate(
+              context,
+              onReactivate: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PlansPage()),
+                );
+              },
+            );
+          }
+        },
+      );
+    }
+
+    return PrimaryButton(
+      text: 'Mostrar QR Code',
+      onPressed: qrPayload.isEmpty
+          ? null
+          : () => QrCodeSheet.show(
+                context,
+                qrPayload: qrPayload,
+                memberCodeDisplay: memberCodeDisplay,
+                memberCodeRaw: memberCodeRaw,
+              ),
+    );
+  }
+
+  Future<void> _loadDependents(String holderUserId) async {
+    if (_dependentsLoaded) return;
+    _dependentsLoaded = true;
+    if (!sl.isRegistered<GetDependentsUseCase>()) return;
+    final cycle = DependentCycleService().currentCycleReference(
+      adhesionDate: DateTime.now(),
+      now: DateTime.now(),
+    );
+    final result = await sl<GetDependentsUseCase>()(
+      GetDependentsParams(
+        holderUserId: holderUserId,
+        cycleReference: cycle,
+        status: DependentStatus.active,
+      ),
+    );
+    if (!mounted) return;
+    result.fold((_) {}, (items) {
+      setState(() {
+        _activeDependents = items.map((e) => e.dependent).toList();
+      });
+    });
+  }
+
+  Widget _buildBeneficiaryChips(String holderName) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ChoiceChip(
+          label: Text(holderName.isEmpty ? 'Titular' : holderName),
+          selected: _selectedDependent == null,
+          onSelected: (_) => setState(() => _selectedDependent = null),
+        ),
+        ..._activeDependents.map(
+          (d) => ChoiceChip(
+            label: Text(d.name),
+            selected: _selectedDependent?.id == d.id,
+            onSelected: (_) => setState(() => _selectedDependent = d),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCard({
+    required String memberName,
+    required String memberCodeDisplay,
+    bool isDependent = false,
+    String? relationship,
+  }) {
+    final displayName = memberName.isEmpty ? '—' : memberName;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -180,20 +375,23 @@ class _CardPageState extends State<CardPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Vita Clube',
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+              Flexible(
+                child: Text(
+                  'Vita Clube',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              const Icon(Icons.verified_outlined, color: Colors.white, size: 20),
+              const Icon(Icons.verified_outlined,
+                  color: Colors.white, size: 20),
             ],
           ),
           const SizedBox(height: 32),
           Text(
-            'Titular',
+            isDependent ? (relationship ?? 'Dependente') : 'Titular',
             style: GoogleFonts.outfit(
               fontSize: 11,
               fontWeight: FontWeight.w400,
@@ -203,7 +401,9 @@ class _CardPageState extends State<CardPage> {
           ),
           const SizedBox(height: 2),
           Text(
-            memberName,
+            displayName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -212,7 +412,7 @@ class _CardPageState extends State<CardPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Código',
+            'Código do membro',
             style: GoogleFonts.outfit(
               fontSize: 11,
               fontWeight: FontWeight.w400,
@@ -222,10 +422,12 @@ class _CardPageState extends State<CardPage> {
           ),
           const SizedBox(height: 2),
           Text(
-            memberCode,
+            memberCodeDisplay,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
               letterSpacing: 2,
             ),
@@ -276,7 +478,13 @@ class _CardPageState extends State<CardPage> {
                     title: c.professionalName ?? c.title,
                     subtitle: c.specialtyName ??
                         DateFormat('dd/MM/yyyy').format(c.scheduledDate),
-                    valueText: '-${currency.format(c.finalValue)}',
+                    valueText: c.discountAmount != null && c.discountAmount! > 0
+                        ? 'Economizou ${currency.format(c.discountAmount)}'
+                        : currency.format(c.finalValue),
+                    valueColor:
+                        c.discountAmount != null && c.discountAmount! > 0
+                            ? const Color(0xFF4CAF50)
+                            : null,
                   ),
                 ),
               )

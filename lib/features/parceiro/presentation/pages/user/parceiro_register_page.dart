@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../../core/config/supabase_config.dart';
+import '../../../../../core/di/injection_container.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../shared/widgets/primary_button.dart';
 import '../../../../admin/presentation/widgets/admin_page_scaffold.dart';
 import '../../../../admin/presentation/widgets/admin_form_card.dart';
 import '../../../../admin/presentation/widgets/admin_form_field.dart';
+import '../../../domain/usecases/partner_application/submit_partner_application_usecase.dart';
 
 class ParceiroRegisterPage extends StatefulWidget {
   const ParceiroRegisterPage({super.key});
@@ -18,15 +21,14 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   String _selectedCategory = 'laboratorio';
   bool _isSaving = false;
 
   static const _categories = [
-    {'value': 'laboratorio', 'label': 'Laboratorio'},
-    {'value': 'clinica', 'label': 'Clinica'},
-    {'value': 'farmacia', 'label': 'Farmacia'},
-    {'value': 'otica', 'label': 'Otica'},
+    {'value': 'laboratorio', 'label': 'Laboratório'},
+    {'value': 'clinica', 'label': 'Clínica'},
+    {'value': 'farmacia', 'label': 'Farmácia'},
+    {'value': 'otica', 'label': 'Ótica'},
     {'value': 'outro', 'label': 'Outro'},
   ];
 
@@ -36,33 +38,18 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
     _addressController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSubmit() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Preencha nome, e-mail e senha.',
-            style: GoogleFonts.plusJakartaSans(fontSize: 13),
-          ),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
-    }
-
-    if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'A senha deve ter pelo menos 6 caracteres.',
+            'Preencha nome e e-mail.',
             style: GoogleFonts.plusJakartaSans(fontSize: 13),
           ),
           backgroundColor: AppTheme.errorColor,
@@ -73,13 +60,32 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
 
     setState(() => _isSaving = true);
 
-    // Simula delay de rede
-    await Future.delayed(const Duration(seconds: 1));
+    final userId = SupabaseConfig.client.auth.currentUser?.id;
+    final result = await sl<SubmitPartnerApplicationUseCase>()(
+      name: name,
+      category: _selectedCategory,
+      address: _addressController.text.trim().isEmpty
+          ? null
+          : _addressController.text.trim(),
+      phone: _phoneController.text.trim().isEmpty
+          ? null
+          : _phoneController.text.trim(),
+      email: email,
+      userId: userId,
+    );
 
     if (!mounted) return;
     setState(() => _isSaving = false);
 
-    _showSuccessDialog();
+    result.fold(
+      (failure) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(failure.message),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      ),
+      (_) => _showSuccessDialog(),
+    );
   }
 
   void _showSuccessDialog() {
@@ -109,7 +115,7 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Cadastro enviado!',
+              'Candidatura enviada!',
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -118,10 +124,9 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Seu cadastro como parceiro foi recebido.\n\n'
-              'No ambiente de testes, voce ja pode acessar com:\n\n'
-              'E-mail: parceiro@vitaclube.com\n'
-              'Senha: parceiro123',
+              'Recebemos sua candidatura como parceiro.\n'
+              'Nossa equipe vai analisar e entrar em contato pelo '
+              'e-mail informado.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
@@ -137,7 +142,7 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
                 text: 'Entendi',
                 onPressed: () {
                   Navigator.pop(ctx);
-                  // Volta ate a tela anterior ao "Seja Parceiro"
+                  // Volta até a tela anterior ao "Seja Parceiro"
                   Navigator.pop(context);
                   Navigator.pop(context);
                 },
@@ -163,7 +168,7 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
                 AdminFormField(
                   label: 'Nome do Estabelecimento',
                   controller: _nameController,
-                  hintText: 'Ex: Lab Vita Saude',
+                  hintText: 'Ex: Lab Vita Saúde',
                 ),
                 const SizedBox(height: 16),
 
@@ -189,6 +194,7 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
                     child: DropdownButton<String>(
                       value: _selectedCategory,
                       isExpanded: true,
+                      menuMaxHeight: 300,
                       icon: const Icon(
                         Icons.keyboard_arrow_down,
                         color: Color(0xFF6D7F95),
@@ -215,7 +221,7 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
                 const SizedBox(height: 16),
 
                 AdminFormField(
-                  label: 'Endereco',
+                  label: 'Endereço',
                   controller: _addressController,
                   hintText: 'Ex: Av. Santos Dumont, 1500',
                 ),
@@ -226,53 +232,19 @@ class _ParceiroRegisterPageState extends State<ParceiroRegisterPage> {
                   hintText: 'Ex: 85999001122',
                   keyboardType: TextInputType.phone,
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Credenciais de acesso
-          AdminFormCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Credenciais de Acesso',
-                  style: GoogleFonts.outfit(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Voce usara esses dados para acessar o painel de parceiro.',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF6D7F95),
-                  ),
-                ),
                 const SizedBox(height: 16),
                 AdminFormField(
-                  label: 'E-mail',
+                  label: 'E-mail para contato',
                   controller: _emailController,
                   hintText: 'Ex: contato@seulab.com',
                   keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                AdminFormField(
-                  label: 'Senha',
-                  controller: _passwordController,
-                  hintText: 'Minimo 6 caracteres',
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-
           PrimaryButton(
-            text: _isSaving ? 'Enviando...' : 'Cadastrar',
+            text: _isSaving ? 'Enviando...' : 'Enviar Candidatura',
             onPressed: _isSaving ? null : _handleSubmit,
           ),
           const SizedBox(height: 24),

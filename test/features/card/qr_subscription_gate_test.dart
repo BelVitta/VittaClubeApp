@@ -13,6 +13,9 @@ import 'package:vita_clube/features/profile/presentation/bloc/profile_event.dart
 import 'package:vita_clube/features/profile/presentation/bloc/profile_state.dart';
 import 'package:vita_clube/features/subscription/domain/entities/subscription_entity.dart';
 import 'package:vita_clube/features/subscription/domain/entities/subscription_status.dart';
+import 'package:vita_clube/features/subscription/presentation/bloc/subscription_bloc.dart';
+import 'package:vita_clube/features/subscription/presentation/bloc/subscription_event.dart';
+import 'package:vita_clube/features/subscription/presentation/bloc/subscription_state.dart';
 
 class MockProfileBloc extends MockBloc<ProfileEvent, ProfileState>
     implements ProfileBloc {}
@@ -21,15 +24,21 @@ class MockConsultationBloc
     extends MockBloc<ConsultationEvent, ConsultationState>
     implements ConsultationBloc {}
 
+class MockSubscriptionBloc
+    extends MockBloc<SubscriptionEvent, SubscriptionState>
+    implements SubscriptionBloc {}
+
 void main() {
   late MockProfileBloc profileBloc;
   late MockConsultationBloc consultationBloc;
+  late MockSubscriptionBloc subscriptionBloc;
 
   setUp(() async {
     await sl.reset();
 
     profileBloc = MockProfileBloc();
     consultationBloc = MockConsultationBloc();
+    subscriptionBloc = MockSubscriptionBloc();
 
     whenListen(
       profileBloc,
@@ -44,6 +53,7 @@ void main() {
 
     sl.registerFactory<ProfileBloc>(() => profileBloc);
     sl.registerFactory<ConsultationBloc>(() => consultationBloc);
+    sl.registerFactory<SubscriptionBloc>(() => subscriptionBloc);
   });
 
   tearDown(() async {
@@ -53,19 +63,79 @@ void main() {
   testWidgets(
       'blocked subscription does not open card QR and shows restore CTA',
       (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: CardPage(subscription: _subscription(blocked: true)),
-      ),
+    whenListen(
+      subscriptionBloc,
+      const Stream<SubscriptionState>.empty(),
+      initialState: SubscriptionLoaded(_subscription(blocked: true)),
     );
 
+    // Sem parâmetro — mesmo caminho da bottom nav.
+    await tester.pumpWidget(
+      const MaterialApp(home: CardPage()),
+    );
+    await tester.pump();
+
     expect(find.text('Restaurar conta para usar QR'), findsOneWidget);
+    expect(find.text('Mostrar QR Code'), findsNothing);
 
     await tester.tap(find.text('Restaurar conta para usar QR'));
     await tester.pumpAndSettle();
 
     expect(find.text('Reative sua conta'), findsOneWidget);
-    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('no subscription shows subscribe CTA and hides QR',
+      (tester) async {
+    whenListen(
+      subscriptionBloc,
+      const Stream<SubscriptionState>.empty(),
+      initialState: const NoSubscription(),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(home: CardPage()),
+    );
+    await tester.pump();
+
+    expect(find.text('Assinar para usar o QR'), findsOneWidget);
+    expect(find.text('Mostrar QR Code'), findsNothing);
+  });
+
+  testWidgets('active subscription shows Mostrar QR Code', (tester) async {
+    whenListen(
+      subscriptionBloc,
+      const Stream<SubscriptionState>.empty(),
+      initialState: SubscriptionLoaded(_subscription(blocked: false)),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(home: CardPage()),
+    );
+    await tester.pump();
+
+    expect(find.text('Mostrar QR Code'), findsOneWidget);
+    expect(find.text('Restaurar conta para usar QR'), findsNothing);
+    expect(find.text('Assinar para usar o QR'), findsNothing);
+  });
+
+  testWidgets(
+      'injected subscription still gates QR (test / explicit caller path)',
+      (tester) async {
+    whenListen(
+      subscriptionBloc,
+      const Stream<SubscriptionState>.empty(),
+      initialState: const SubscriptionInitial(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CardPage(subscription: _subscription(blocked: true)),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Restaurar conta para usar QR'), findsOneWidget);
+    expect(find.text('Mostrar QR Code'), findsNothing);
   });
 }
 
@@ -76,6 +146,7 @@ ProfileEntity _profile() {
     email: 'user@example.com',
     role: 'user',
     memberSince: DateTime(2026, 6, 2),
+    memberCode: '84729103',
   );
 }
 

@@ -11,6 +11,7 @@ class AdminPageScaffold extends StatelessWidget {
   final Widget body;
   final Widget? floatingBottom;
   final List<Widget>? actions;
+  final bool showBackButton;
 
   const AdminPageScaffold({
     super.key,
@@ -19,11 +20,12 @@ class AdminPageScaffold extends StatelessWidget {
     required this.body,
     this.floatingBottom,
     this.actions,
+    this.showBackButton = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.of(context).canPop();
+    final canPop = showBackButton && Navigator.of(context).canPop();
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(

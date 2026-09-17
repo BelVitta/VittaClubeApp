@@ -17,6 +17,7 @@ class UserAdminModel extends UserAdminEntity {
     super.consultationCountThisMonth,
     super.totalReferralCount,
     super.role,
+    super.receptionistCode,
   });
 
   /// Cria UserAdminModel a partir de JSON
@@ -36,6 +37,7 @@ class UserAdminModel extends UserAdminEntity {
           json['consultationCountThisMonth'] as int? ?? 0,
       totalReferralCount: json['totalReferralCount'] as int? ?? 0,
       role: json['role'] as String? ?? 'user',
+      receptionistCode: json['receptionistCode'] as String?,
     );
   }
 
@@ -55,6 +57,7 @@ class UserAdminModel extends UserAdminEntity {
       'consultationCountThisMonth': consultationCountThisMonth,
       'totalReferralCount': totalReferralCount,
       'role': role,
+      'receptionistCode': receptionistCode,
     };
   }
 
@@ -74,6 +77,7 @@ class UserAdminModel extends UserAdminEntity {
       consultationCountThisMonth: entity.consultationCountThisMonth,
       totalReferralCount: entity.totalReferralCount,
       role: entity.role,
+      receptionistCode: entity.receptionistCode,
     );
   }
 }

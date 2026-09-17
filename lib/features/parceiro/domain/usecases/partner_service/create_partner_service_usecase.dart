@@ -8,6 +8,7 @@ class CreatePartnerServiceUseCase {
 
   CreatePartnerServiceUseCase(this.repository);
 
-  Future<Either<Failure, PartnerServiceEntity>> call(PartnerServiceEntity entity) =>
+  Future<Either<Failure, PartnerServiceEntity>> call(
+          PartnerServiceEntity entity) =>
       repository.create(entity);
 }

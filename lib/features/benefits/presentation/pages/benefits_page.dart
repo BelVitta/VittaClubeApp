@@ -9,8 +9,8 @@ class BenefitsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AdminPageScaffold(
-      title: 'Beneficios',
-      subtitle: 'Tudo que voce ganha sendo Vita Clube',
+      title: 'Benefícios',
+      subtitle: 'Tudo que você ganha sendo Vita Clube',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -37,7 +37,7 @@ class BenefitsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Seus beneficios',
+                  'Seus benefícios',
                   style: GoogleFonts.outfit(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -46,7 +46,7 @@ class BenefitsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Aproveite descontos, atendimento\nprioritario e muito mais como\nmembro do Vita Clube.',
+                  'Aproveite descontos, atendimento\nprioritário e muito mais como\nmembro do Vita Clube.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
@@ -60,78 +60,78 @@ class BenefitsPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Saude
-          _buildSectionTitle('Saude e Bem-estar'),
+          // Saúde
+          _buildSectionTitle('Saúde e bem-estar'),
           const SizedBox(height: 12),
           _buildBenefit(
             icon: Icons.local_hospital_outlined,
             title: 'Consultas com desconto',
             description:
-                'Ate 50% de desconto em consultas medicas com especialistas parceiros.',
+                'Até 50% de desconto em consultas médicas com especialistas parceiros.',
           ),
           const SizedBox(height: 8),
           _buildBenefit(
             icon: Icons.science_outlined,
             title: 'Exames laboratoriais',
             description:
-                'Precos exclusivos em hemograma, glicemia, colesterol e mais de 100 exames.',
+                'Preços exclusivos em hemograma, glicemia, colesterol e mais de 100 exames.',
           ),
           const SizedBox(height: 8),
           _buildBenefit(
             icon: Icons.visibility_outlined,
-            title: 'Otica e lentes',
+            title: 'Ótica e lentes',
             description:
-                'Descontos em armacoes, lentes de contato e consultas oftalmologicas.',
+                'Descontos em armações, lentes de contato e consultas oftalmológicas.',
           ),
           const SizedBox(height: 8),
           _buildBenefit(
             icon: Icons.local_pharmacy_outlined,
-            title: 'Farmacias parceiras',
+            title: 'Farmácias parceiras',
             description:
-                'Descontos em medicamentos e produtos de saude nas farmacias conveniadas.',
+                'Descontos em medicamentos e produtos de saúde nas farmácias conveniadas.',
           ),
           const SizedBox(height: 24),
 
           // Rede de Parceiros
-          _buildSectionTitle('Rede de Parceiros'),
+          _buildSectionTitle('Rede de parceiros'),
           const SizedBox(height: 12),
           _buildBenefit(
             icon: Icons.handshake_outlined,
             title: 'Ampla rede credenciada',
             description:
-                'Laboratorios, clinicas, farmacias e oticas em diversas cidades.',
+                'Laboratórios, clínicas, farmácias e óticas em diversas cidades.',
           ),
           const SizedBox(height: 8),
           _buildBenefit(
             icon: Icons.qr_code_outlined,
             title: 'Check-in digital',
             description:
-                'Valide seu desconto direto pelo app com token + codigo do parceiro.',
+                'Mostre a carteirinha no caixa. O parceiro lê o QR no aparelho dele.',
           ),
           const SizedBox(height: 24),
 
           // Programa de Fidelidade
-          _buildSectionTitle('Programa de Fidelidade'),
+          _buildSectionTitle('Programa de fidelidade'),
           const SizedBox(height: 12),
           _buildBenefit(
             icon: Icons.emoji_events_outlined,
-            title: 'Niveis de badge',
+            title: 'Níveis de badge',
             description:
-                'Suba de nivel (Bronze, Prata, Ouro, Diamante) e desbloqueie beneficios maiores.',
+                'Suba de nível (Bronze, Prata, Ouro, Diamante) e desbloqueie benefícios maiores.',
           ),
           const SizedBox(height: 8),
           _buildBenefit(
             icon: Icons.people_outlined,
-            title: 'Indicacao premiada',
+            title: 'Indicação premiada',
             description:
-                'Indique amigos e ganhe pontos extras para subir de nivel mais rapido.',
+                'Indique amigos e ganhe pontos extras para subir de nível mais rápido.',
           ),
           const SizedBox(height: 8),
           _buildBenefit(
             icon: Icons.card_giftcard_outlined,
             title: 'Sorteios exclusivos',
             description:
-                'Participe de sorteios mensais disponiveis apenas para membros ativos.',
+                'Participe de sorteios mensais disponíveis apenas para membros ativos.',
           ),
           const SizedBox(height: 8),
           _buildBenefit(

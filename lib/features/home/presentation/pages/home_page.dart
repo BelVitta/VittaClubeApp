@@ -22,6 +22,9 @@ import '../../../subscription/presentation/bloc/subscription_bloc.dart';
 import '../../../subscription/presentation/bloc/subscription_event.dart';
 import '../../../subscription/presentation/bloc/subscription_state.dart';
 import '../../../subscription/presentation/widgets/no_plan_card.dart';
+import '../../../subscription/presentation/widgets/no_plan_promo_controller.dart';
+import '../../../subscription/presentation/widgets/no_plan_promotion_dialog.dart';
+import '../../domain/entities/plan_level.dart';
 import '../widgets/plan_banner.dart';
 import '../widgets/badge_detail_sheet.dart';
 import '../widgets/quick_action_card.dart';
@@ -31,9 +34,9 @@ import '../../../plans/data/datasources/plans_supabase_datasource.dart';
 import '../../../plans/presentation/pages/payment_page.dart';
 import '../../../plans/presentation/pages/plans_page.dart';
 import '../../../benefits/presentation/pages/benefits_page.dart';
-import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../../../payments/presentation/pages/payments_page.dart';
 import '../../../parceiro/presentation/pages/user/partners_list_page.dart';
+import '../../../notifications/presentation/widgets/notification_bell_button.dart';
 
 /// Página inicial. Ouve três BLoCs:
 /// - `ProfileBloc` para a saudação (nome do usuário).
@@ -81,6 +84,8 @@ class _HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<_HomeView> {
   final int _currentNavIndex = 0;
+  bool _noPlanCardDismissed = false;
+  bool _promoDialogOpen = false;
 
   static const IconData _beneficiosIcon = Icons.star_rounded;
   static const IconData _pagarIcon = Icons.payment_outlined;
@@ -117,64 +122,118 @@ class _HomeViewState extends State<_HomeView> {
     });
   }
 
+  /// Banner promocional sobreposto — 1× por sessão de app enquanto sem plano.
+  Future<void> _maybeShowNoPlanPromo() async {
+    final promo = sl<NoPlanPromoController>();
+    if (!promo.canShow || _promoDialogOpen || !mounted) return;
+
+    promo.markShown();
+    _promoDialogOpen = true;
+
+    String? priceLabel;
+    RemotePlan? cheapest;
+    try {
+      final plans = await _plansFuture;
+      if (plans.isNotEmpty) {
+        cheapest = plans.first;
+        final price = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$')
+            .format(cheapest.price);
+        priceLabel = '$price/${cheapest.subscriptionType.periodLabel}';
+      }
+    } catch (_) {
+      // Sem preço: dialog usa copy genérica.
+    }
+
+    if (!mounted) {
+      _promoDialogOpen = false;
+      return;
+    }
+
+    await NoPlanPromotionDialog.show(
+      context,
+      priceLabel: priceLabel,
+      onViewPlans: () {
+        final plan = cheapest;
+        if (plan != null) {
+          _goToPayment(plan);
+        } else {
+          _goToPlans();
+        }
+      },
+    );
+
+    if (mounted) _promoDialogOpen = false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            Positioned(
-              top: -16,
-              left: MediaQuery.of(context).size.width / 2 - 251.75,
-              child: Container(
-                width: 503.5,
-                height: 283.06,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppTheme.gradientLight.withValues(alpha: 0.3),
-                      Colors.white.withValues(alpha: 0),
-                    ],
-                    stops: const [0, 1],
-                  ),
-                ),
-              ),
-            ),
-            Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        _buildHeader(),
-                        const SizedBox(height: 27),
-                        _buildPlanSection(),
-                        const SizedBox(height: 12),
-                        _buildQuickActions(),
-                        const SizedBox(height: 12),
-                        _buildConsultationHistory(),
-                        const SizedBox(height: 32),
+    return BlocListener<SubscriptionBloc, SubscriptionState>(
+      listenWhen: (previous, current) =>
+          current is NoSubscription && previous is! NoSubscription,
+      listener: (context, state) {
+        if (state is NoSubscription) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _maybeShowNoPlanPromo();
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Positioned(
+                top: -16,
+                left: MediaQuery.of(context).size.width / 2 - 251.75,
+                child: Container(
+                  width: 503.5,
+                  height: 283.06,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppTheme.gradientLight.withValues(alpha: 0.3),
+                        Colors.white.withValues(alpha: 0),
                       ],
+                      stops: const [0, 1],
                     ),
                   ),
                 ),
-                AppBottomNavigation(
-                  currentIndex: _currentNavIndex,
-                  onTap: (index) => AppNavigation.goToBottomNavIndex(
-                    context,
-                    index,
-                    currentIndex: _currentNavIndex,
+              ),
+              Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+                          _buildHeader(),
+                          const SizedBox(height: 27),
+                          _buildPlanSection(),
+                          const SizedBox(height: 12),
+                          _buildQuickActions(),
+                          const SizedBox(height: 12),
+                          _buildConsultationHistory(),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  AppBottomNavigation(
+                    currentIndex: _currentNavIndex,
+                    onTap: (index) => AppNavigation.goToBottomNavIndex(
+                      context,
+                      index,
+                      currentIndex: _currentNavIndex,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -218,39 +277,19 @@ class _HomeViewState extends State<_HomeView> {
             );
           },
         ),
-        Container(
-          width: 39,
-          height: 39,
-          decoration: BoxDecoration(
-            color: const Color(0xFF01225B).withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(19.5),
-          ),
-          child: IconButton(
-            icon: const Icon(
-              Icons.notifications_outlined,
-              size: 19,
-              color: Color(0xFF01225B),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationsPage()),
-              );
-            },
-            padding: EdgeInsets.zero,
-          ),
-        ),
+        const NotificationBellButton(),
       ],
     );
   }
 
   /// Combina `SubscriptionBloc` + `BadgeProgressBloc`:
-  /// - Sem assinatura → `NoPlanCard`
-  /// - Com assinatura → `PlanBanner` alimentado pelo progresso real do badge
+  /// - Sem assinatura → `NoPlanCard` (CTA) em cima + `PlanBanner` (Sem plano)
+  /// - Com assinatura → `PlanBanner` com patente e cor da patente
   Widget _buildPlanSection() {
     return BlocBuilder<SubscriptionBloc, SubscriptionState>(
       builder: (context, subState) {
-        if (subState is SubscriptionLoading || subState is SubscriptionInitial) {
+        if (subState is SubscriptionLoading ||
+            subState is SubscriptionInitial) {
           return const SkeletonBox(
             width: double.infinity,
             height: 88,
@@ -258,21 +297,41 @@ class _HomeViewState extends State<_HomeView> {
           );
         }
         if (subState is NoSubscription || subState is SubscriptionError) {
-          return FutureBuilder<List<RemotePlan>>(
-            future: _plansFuture,
-            builder: (context, snapshot) {
-              final plans = snapshot.data;
-              if (plans == null || plans.isEmpty) {
-                return NoPlanCard(onTap: _goToPlans);
-              }
-              final cheapest = plans.first;
-              final price = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$')
-                  .format(cheapest.price);
-              return NoPlanCard(
-                priceLabel: '$price/${cheapest.subscriptionType.periodLabel}',
-                onTap: () => _goToPayment(cheapest),
-              );
-            },
+          return Column(
+            children: [
+              if (!_noPlanCardDismissed) ...[
+                FutureBuilder<List<RemotePlan>>(
+                  future: _plansFuture,
+                  builder: (context, snapshot) {
+                    final plans = snapshot.data;
+                    if (plans == null || plans.isEmpty) {
+                      return NoPlanCard(
+                        onTap: _goToPlans,
+                        onClose: () =>
+                            setState(() => _noPlanCardDismissed = true),
+                      );
+                    }
+                    final cheapest = plans.first;
+                    final price =
+                        NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$')
+                            .format(cheapest.price);
+                    return NoPlanCard(
+                      priceLabel:
+                          '$price/${cheapest.subscriptionType.periodLabel}',
+                      onTap: () => _goToPayment(cheapest),
+                      onClose: () =>
+                          setState(() => _noPlanCardDismissed = true),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+              PlanBanner(
+                planLevel: PlanLevel.none,
+                progress: 0,
+                onTap: _goToPlans,
+              ),
+            ],
           );
         }
         if (subState is SubscriptionLoaded) {
@@ -300,7 +359,11 @@ class _HomeViewState extends State<_HomeView> {
             },
           );
         }
-        return NoPlanCard(onTap: _goToPlans);
+        return PlanBanner(
+          planLevel: PlanLevel.none,
+          progress: 0,
+          onTap: _goToPlans,
+        );
       },
     );
   }
@@ -312,7 +375,7 @@ class _HomeViewState extends State<_HomeView> {
           children: [
             Expanded(
               child: QuickActionCard(
-                title: 'Beneficios',
+                title: 'Benefícios',
                 icon: _beneficiosIcon,
                 onTap: () {
                   Navigator.push(
@@ -343,8 +406,7 @@ class _HomeViewState extends State<_HomeView> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const PartnersListPage()),
+                    MaterialPageRoute(builder: (_) => const PartnersListPage()),
                   );
                 },
               ),
@@ -371,8 +433,7 @@ class _HomeViewState extends State<_HomeView> {
         const SizedBox(height: 6),
         BlocBuilder<ConsultationBloc, ConsultationState>(
           builder: (context, state) {
-            if (state is ConsultationLoading ||
-                state is ConsultationInitial) {
+            if (state is ConsultationLoading || state is ConsultationInitial) {
               return Column(
                 children: const [
                   SkeletonBox(width: double.infinity, height: 62),

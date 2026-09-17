@@ -7,7 +7,8 @@ import '../../../domain/usecases/partner_service/delete_partner_service_usecase.
 import 'partner_service_event.dart';
 import 'partner_service_state.dart';
 
-class PartnerServiceBloc extends Bloc<PartnerServiceEvent, PartnerServiceState> {
+class PartnerServiceBloc
+    extends Bloc<PartnerServiceEvent, PartnerServiceState> {
   final GetPartnerServicesUseCase getPartnerServicesUseCase;
   final CreatePartnerServiceUseCase createPartnerServiceUseCase;
   final UpdatePartnerServiceUseCase updatePartnerServiceUseCase;
@@ -26,7 +27,8 @@ class PartnerServiceBloc extends Bloc<PartnerServiceEvent, PartnerServiceState> 
     on<DeletePartnerServiceRequested>(_onDelete);
   }
 
-  Future<void> _onLoad(LoadPartnerServices event, Emitter<PartnerServiceState> emit) async {
+  Future<void> _onLoad(
+      LoadPartnerServices event, Emitter<PartnerServiceState> emit) async {
     emit(state.copyWith(status: PartnerServiceStatus.loading));
     final result = await getPartnerServicesUseCase(event.partnerId);
     result.fold(
@@ -42,7 +44,8 @@ class PartnerServiceBloc extends Bloc<PartnerServiceEvent, PartnerServiceState> 
     );
   }
 
-  void _onSearch(SearchPartnerServices event, Emitter<PartnerServiceState> emit) {
+  void _onSearch(
+      SearchPartnerServices event, Emitter<PartnerServiceState> emit) {
     final query = event.query.toLowerCase();
     if (query.isEmpty) {
       emit(state.copyWith(searchQuery: '', filteredItems: state.items));
@@ -54,7 +57,8 @@ class PartnerServiceBloc extends Bloc<PartnerServiceEvent, PartnerServiceState> 
     }
   }
 
-  Future<void> _onCreate(CreatePartnerServiceRequested event, Emitter<PartnerServiceState> emit) async {
+  Future<void> _onCreate(CreatePartnerServiceRequested event,
+      Emitter<PartnerServiceState> emit) async {
     emit(state.copyWith(status: PartnerServiceStatus.saving));
     final result = await createPartnerServiceUseCase(event.entity);
     result.fold(
@@ -69,7 +73,8 @@ class PartnerServiceBloc extends Bloc<PartnerServiceEvent, PartnerServiceState> 
     );
   }
 
-  Future<void> _onUpdate(UpdatePartnerServiceRequested event, Emitter<PartnerServiceState> emit) async {
+  Future<void> _onUpdate(UpdatePartnerServiceRequested event,
+      Emitter<PartnerServiceState> emit) async {
     emit(state.copyWith(status: PartnerServiceStatus.saving));
     final result = await updatePartnerServiceUseCase(event.entity);
     result.fold(
@@ -84,7 +89,8 @@ class PartnerServiceBloc extends Bloc<PartnerServiceEvent, PartnerServiceState> 
     );
   }
 
-  Future<void> _onDelete(DeletePartnerServiceRequested event, Emitter<PartnerServiceState> emit) async {
+  Future<void> _onDelete(DeletePartnerServiceRequested event,
+      Emitter<PartnerServiceState> emit) async {
     emit(state.copyWith(status: PartnerServiceStatus.deleting));
     final result = await deletePartnerServiceUseCase(event.id);
     result.fold(

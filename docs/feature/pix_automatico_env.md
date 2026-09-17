@@ -1,5 +1,8 @@
 # Pix Automático Woovi - Variáveis de ambiente
 
+Guia completo (conta de dev vs produção, webhook, checkout e cartão Mercado Pago):
+[woovi_e_mercadopago.md](./woovi_e_mercadopago.md).
+
 Estas variáveis devem existir apenas no backend Supabase/Edge Functions. Nenhum
 valor de Woovi deve ser enviado para o app Flutter.
 

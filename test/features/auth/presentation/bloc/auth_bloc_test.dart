@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:vita_clube/core/error/failures.dart';
 import 'package:vita_clube/features/auth/domain/entities/user_entity.dart';
+import 'package:vita_clube/features/auth/domain/usecases/check_cpf_available_usecase.dart';
 import 'package:vita_clube/features/auth/domain/usecases/google_signin_usecase.dart';
 import 'package:vita_clube/features/auth/domain/usecases/login_usecase.dart';
 import 'package:vita_clube/features/auth/domain/usecases/register_usecase.dart';
@@ -18,11 +19,15 @@ class MockRegisterUseCase extends Mock implements RegisterUseCase {}
 
 class MockGoogleSignInUseCase extends Mock implements GoogleSignInUseCase {}
 
+class MockCheckCpfAvailableUseCase extends Mock
+    implements CheckCpfAvailableUseCase {}
+
 void main() {
   late AuthBloc bloc;
   late MockLoginUseCase mockLogin;
   late MockRegisterUseCase mockRegister;
   late MockGoogleSignInUseCase mockGoogleSignIn;
+  late MockCheckCpfAvailableUseCase mockCheckCpfAvailable;
 
   const tUser = UserEntity(
     id: '1',
@@ -37,10 +42,14 @@ void main() {
     mockLogin = MockLoginUseCase();
     mockRegister = MockRegisterUseCase();
     mockGoogleSignIn = MockGoogleSignInUseCase();
+    mockCheckCpfAvailable = MockCheckCpfAvailableUseCase();
+    when(() => mockCheckCpfAvailable(any()))
+        .thenAnswer((_) async => const Right(true));
     bloc = AuthBloc(
       loginUseCase: mockLogin,
       registerUseCase: mockRegister,
       googleSignInUseCase: mockGoogleSignIn,
+      checkCpfAvailableUseCase: mockCheckCpfAvailable,
     );
   });
 
@@ -166,13 +175,14 @@ void main() {
               cpf: any(named: 'cpf'),
               phone: any(named: 'phone'),
               password: any(named: 'password'),
+              receptionistCode: any(named: 'receptionistCode'),
             )).thenAnswer((_) async => const Right(tUser));
         return bloc;
       },
       seed: () => const AuthState(
         name: 'Test User',
         email: 'test@vitaclube.com',
-        cpf: '12345678901',
+        cpf: '11144477735',
         phone: '11999999999',
         password: 'Teste123',
         confirmPassword: 'Teste123',
@@ -184,6 +194,41 @@ void main() {
             .having((s) => s.status, 'status', AuthStatus.success)
             .having((s) => s.user, 'user', tUser),
       ],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'emite [loading, failure] quando CPF já está cadastrado',
+      build: () {
+        when(() => mockCheckCpfAvailable(any()))
+            .thenAnswer((_) async => const Right(false));
+        return bloc;
+      },
+      seed: () => const AuthState(
+        name: 'Test User',
+        email: 'test@vitaclube.com',
+        cpf: '11144477735',
+        phone: '11999999999',
+        password: 'Teste123',
+        confirmPassword: 'Teste123',
+      ),
+      act: (b) => b.add(RegisterSubmitted()),
+      expect: () => [
+        isA<AuthState>().having((s) => s.status, 'status', AuthStatus.loading),
+        isA<AuthState>()
+            .having((s) => s.status, 'status', AuthStatus.failure)
+            .having((s) => s.errorMessage, 'errorMessage',
+                'Este CPF já está cadastrado.'),
+      ],
+      verify: (_) {
+        verifyNever(() => mockRegister(
+              name: any(named: 'name'),
+              email: any(named: 'email'),
+              cpf: any(named: 'cpf'),
+              phone: any(named: 'phone'),
+              password: any(named: 'password'),
+              receptionistCode: any(named: 'receptionistCode'),
+            ));
+      },
     );
 
     blocTest<AuthBloc, AuthState>(
@@ -247,8 +292,17 @@ void main() {
         isA<AuthState>()
             .having((s) => s.status, 'status', AuthStatus.failure)
             .having((s) => s.errorMessage, 'errorMessage',
-                'Google Sign-In cancelado.'),
+                'Google Sign-In cancelado.')
+            .having(
+              (s) => s.errorSource,
+              'errorSource',
+              AuthErrorSource.social,
+            )
+            .having((s) => s.socialError, 'socialError',
+                'Google Sign-In cancelado.')
+            .having((s) => s.credentialsError, 'credentialsError', isNull),
       ],
     );
   });
 }
+

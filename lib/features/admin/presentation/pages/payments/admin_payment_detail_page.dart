@@ -19,7 +19,7 @@ class AdminPaymentDetailPage extends StatelessWidget {
       body: AdminFormCard(
         child: Column(
           children: [
-            _DetailRow(label: 'Usuario', value: entity.userName),
+            _DetailRow(label: 'Usuário', value: entity.userName),
             const SizedBox(height: 16),
             _DetailRow(label: 'Plano', value: entity.planName),
             const SizedBox(height: 16),
@@ -28,7 +28,7 @@ class AdminPaymentDetailPage extends StatelessWidget {
               value: 'R\$ ${entity.amount.toStringAsFixed(2)}',
             ),
             const SizedBox(height: 16),
-            _DetailRow(label: 'Metodo', value: entity.method),
+            _DetailRow(label: 'Método', value: entity.method),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

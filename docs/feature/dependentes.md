@@ -6,11 +6,18 @@ sem add-on pago neste momento.
 ## Regras de Negocio
 
 - **RN-01**: Cada titular pode ter no maximo `max_dependents_per_holder`
-  dependentes ativos. Default: 2. Parametro global configuravel.
-- **RN-02**: Cada dependente tem `monthly_uses_per_dependent` usos por ciclo.
-  Default: 2. Parametro global configuravel.
-- **RN-03**: Os 2 primeiros dependentes sao gratuitos. Nao ha cobranca de
-  add-on neste momento.
+  dependentes (somando `pending` + `active`). Default: 2. Parametro global
+  configuravel.
+- **RN-02**: Cada dependente ativo tem `monthly_uses_per_dependent` usos por
+  ciclo. Default: 1. Parametro global configuravel.
+- **RN-03**: Todo cadastro de dependente entra como `pending`. Ele só pode
+  ser usado (selecionado num agendamento, ter QR validado) depois que um
+  admin aprova presencialmente — não existe fluxo self-service nem upload
+  de documento. É uma confirmação humana no balcão (ex: na primeira visita
+  do dependente), sem custo de verificação externa/API paga.
+- **RN-03b**: Um admin pode rejeitar um cadastro `pending`, gravando
+  `rejection_reason`. O registro vira `inactive` (mantido para auditoria,
+  não é apagado).
 - **RN-04**: O debito de cota ocorre somente na validacao do QR pela recepcao.
   Agendamento nunca debita cota.
 - **RN-05**: Usos restantes = limite mensal menos `usage_records` utilizados
@@ -21,54 +28,68 @@ sem add-on pago neste momento.
   e protegida contra concorrencia.
 - **RN-08**: O QR carrega apenas identificador opaco e assinado do agendamento.
   Validacao real sempre ocorre no servidor.
-- **RN-09**: CPF do dependente e unico globalmente entre dependentes ativos.
+- **RN-09**: CPF do dependente e unico globalmente entre dependentes
+  `pending` + `active` (evita fila de cadastros duplicados aguardando
+  aprovação).
 - **RN-10**: Uso so e liberado se o titular estiver com assinatura em dia e o
-  dependente estiver ativo.
+  dependente estiver `active` (não `pending`).
 
 ## Fluxo do Cliente
 
-1. Titular cadastra dependente.
-2. Sistema valida limite ativo e CPF unico.
-3. Titular escolhe para quem sera o desconto ao agendar.
-4. Agendamento gera QR assinado sem debitar cota.
-5. Cota e debitada apenas quando a recepcao valida o QR.
+1. Titular cadastra dependente → status `pending`.
+2. Sistema valida limite (`pending`+`active`) e CPF unico.
+3. Titular aguarda aprovação presencial de um admin (ex: primeira visita).
+4. Uma vez `active`, o titular pode escolher esse dependente ao agendar.
+5. Agendamento gera QR assinado sem debitar cota.
+6. Cota e debitada apenas quando a recepcao valida o QR.
 
 ## Fluxo da Recepcao
 
-1. Admin escaneia QR do agendamento.
-2. Servidor valida assinatura, status, janela, assinatura do titular e status
-   do dependente.
-3. Servidor bloqueia concorrencia, reconta usos no ciclo e grava
+1. Admin revisa cadastros `pending` (tela própria no painel admin) e
+   aprova/rejeita presencialmente.
+2. Admin escaneia QR do agendamento.
+3. Servidor valida assinatura, status, janela, assinatura do titular e status
+   `active` do dependente.
+4. Servidor bloqueia concorrencia, reconta usos no ciclo e grava
    `usage_records`.
-4. Agendamento muda para `utilizado` ou retorna recusa clara.
+5. Agendamento muda para `utilizado` ou retorna recusa clara.
 
 ## Configuracoes
 
-- `max_dependents_per_holder`: maximo de dependentes ativos por titular.
-- `monthly_uses_per_dependent`: usos por dependente em cada ciclo.
+- `max_dependents_per_holder`: maximo de dependentes (pending+active) por
+  titular. Default 2.
+- `monthly_uses_per_dependent`: usos por dependente ativo em cada ciclo.
+  Default 1.
 
-Ambas ficam em `clinic_settings` para evitar hardcode.
+Ambas ficam em `clinic_settings` para evitar hardcode, editáveis em
+`AdminClinicSettingsPage`.
 
 ## Mapeamento tecnico
 
 - UI do cliente: `lib/features/dependents/presentation/pages/dependents_page.dart`
   e widgets de selecao/cadastro em `presentation/widgets`.
+- UI do admin (aprovação): `lib/features/admin/presentation/pages/dependents/admin_dependents_list_page.dart`.
 - Regras de negocio: use cases e services em
   `lib/features/dependents/domain`.
 - Persistencia: datasource Supabase em
   `lib/features/dependents/data/datasources/dependents_supabase_datasource.dart`.
-- Validacao atomica do QR: RPC `validate_dependent_qr`.
+- Validacao atomica do QR: RPC `validate_dependent_qr` (dependente) e
+  `validate_member_qr` (titular) — ambas chamadas pelo mesmo
+  `AdminQrScannerPage`, que detecta o formato do código escaneado.
 - Auditoria: `dependent_qr_validation_audit_logs`.
-- Expiracao: funcao `expire_stale_dependent_appointments`, chamada por job
-  agendado ou rotina operacional.
+- Expiracao: funcao `expire_stale_dependent_appointments`, agendada via
+  `pg_cron`.
 
 ## Estados e falhas esperadas
 
-- Cadastro bloqueado quando o titular atinge o limite configurado.
-- Cadastro bloqueado quando CPF ja esta ativo em outro titular.
+- Cadastro sempre nasce `pending`; nunca é usável antes da aprovação.
+- Cadastro bloqueado quando o titular atinge o limite configurado
+  (contando pending+active).
+- Cadastro bloqueado quando CPF ja esta pending/active em outro titular.
 - Agendamento criado em `agendado` sem gerar `usage_records`.
 - QR recusado quando token e invalido, agendamento expirou, titular esta sem
-  assinatura ativa, dependente esta inativo ou cota foi esgotada.
+  assinatura ativa, dependente nao esta `active` (inclui `pending`) ou cota
+  foi esgotada.
 - Replay de QR ja utilizado retorna decisao propria e nao debita novo uso.
 
 ## Acessibilidade

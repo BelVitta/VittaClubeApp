@@ -4,6 +4,7 @@ import '../../domain/entities/consultation_admin_entity.dart';
 import '../../domain/entities/coupon_entity.dart';
 import '../../domain/entities/professional_entity.dart';
 import '../../domain/entities/draw_entity.dart';
+import '../../domain/entities/notification_campaign_entity.dart';
 import '../../domain/entities/notification_template_entity.dart';
 import '../../domain/entities/payment_admin_entity.dart';
 import '../../domain/entities/plan_admin_entity.dart';
@@ -15,6 +16,7 @@ import '../models/consultation_admin_model.dart';
 import '../models/coupon_model.dart';
 import '../models/professional_model.dart';
 import '../models/draw_model.dart';
+import '../models/notification_campaign_model.dart';
 import '../models/notification_template_model.dart';
 import '../models/payment_admin_model.dart';
 import '../models/plan_admin_model.dart';
@@ -76,6 +78,16 @@ abstract class AdminDataSource {
   Future<NotificationTemplateModel> updateNotification(
       NotificationTemplateEntity notification);
   Future<void> deleteNotification(String id);
+
+  Future<List<NotificationCampaignModel>> getNotificationCampaigns();
+  Future<SendCampaignResult> sendNotificationCampaign({
+    required String title,
+    required String body,
+    required String type,
+    required String audience,
+    String? targetUserId,
+    required Map<String, dynamic> data,
+  });
 
   // Draws
   Future<List<DrawModel>> getDraws();

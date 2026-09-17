@@ -13,6 +13,7 @@ class DependentModel extends DependentEntity {
     required super.relationship,
     required super.status,
     required super.createdAt,
+    super.rejectionReason,
   });
 
   factory DependentModel.fromJson(Map<String, dynamic> json) {
@@ -23,8 +24,9 @@ class DependentModel extends DependentEntity {
       cpf: json['cpf'] as String,
       birthDate: DateTime.parse(json['birth_date'] as String),
       relationship: json['relationship'] as String,
-      status: DependentStatus.fromDb(json['status'] as String? ?? 'active'),
+      status: DependentStatus.fromDb(json['status'] as String? ?? 'pending'),
       createdAt: DateTime.parse(json['created_at'] as String),
+      rejectionReason: json['rejection_reason'] as String?,
     );
   }
 

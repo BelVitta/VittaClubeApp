@@ -36,5 +36,6 @@ class PartnerValidationState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, items, filteredItems, searchQuery, errorMessage];
+  List<Object?> get props =>
+      [status, items, filteredItems, searchQuery, errorMessage];
 }

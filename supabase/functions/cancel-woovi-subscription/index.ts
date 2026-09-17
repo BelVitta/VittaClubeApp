@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { errorResponse, jsonResponse } from "../_shared/http.ts";
+import { enforceRateLimit, errorResponse, jsonResponse } from "../_shared/http.ts";
 import { WooviClient } from "../_shared/woovi/client.ts";
 import { getWooviEnv } from "../_shared/woovi/env.ts";
 
@@ -23,6 +23,9 @@ Deno.serve(async (request) => {
   const client = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: userData, error: userError } = await userClient.auth.getUser();
   if (userError || !userData.user) return errorResponse("Não autenticado.", 401);
+
+  const limited = await enforceRateLimit(userClient, "cancel_woovi_subscription", 5);
+  if (limited) return limited;
 
   const { data: subscription, error } = await client
     .from("subscriptions")

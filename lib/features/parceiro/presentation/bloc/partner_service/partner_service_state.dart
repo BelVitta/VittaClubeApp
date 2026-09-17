@@ -2,7 +2,16 @@ import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/partner_service_entity.dart';
 
-enum PartnerServiceStatus { initial, loading, loaded, saving, saved, deleting, deleted, failure }
+enum PartnerServiceStatus {
+  initial,
+  loading,
+  loaded,
+  saving,
+  saved,
+  deleting,
+  deleted,
+  failure
+}
 
 class PartnerServiceState extends Equatable {
   final PartnerServiceStatus status;
@@ -36,5 +45,6 @@ class PartnerServiceState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, items, filteredItems, searchQuery, errorMessage];
+  List<Object?> get props =>
+      [status, items, filteredItems, searchQuery, errorMessage];
 }

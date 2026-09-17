@@ -1,15 +1,12 @@
 import 'dart:convert';
-
-import 'package:crypto/crypto.dart';
+import 'dart:math';
 
 import '../entities/dependent_enums.dart';
 
 typedef QrSecretProvider = Future<String> Function();
 
 class QrTokenService {
-  final QrSecretProvider secretProvider;
-
-  const QrTokenService({required this.secretProvider});
+  const QrTokenService({QrSecretProvider? secretProvider});
 
   Future<String> generateAppointmentToken({
     required String holderUserId,
@@ -17,7 +14,9 @@ class QrTokenService {
     String? beneficiaryId,
     required DateTime scheduledAt,
   }) async {
-    final secret = await secretProvider();
+    // O token é um identificador aleatório de uso único. A autorização é
+    // feita exclusivamente pela RPC no backend; nenhum segredo é enviado
+    // ao aplicativo cliente.
     final payload = jsonEncode({
       'h': holderUserId,
       't': beneficiaryType.dbValue,
@@ -25,10 +24,10 @@ class QrTokenService {
       's': scheduledAt.toUtc().toIso8601String(),
       'n': DateTime.now().microsecondsSinceEpoch,
     });
-    final encodedPayload = base64Url.encode(utf8.encode(payload));
-    final signature = Hmac(sha256, utf8.encode(secret))
-        .convert(utf8.encode(encodedPayload))
-        .toString();
-    return '$encodedPayload.$signature';
+    final nonce = List<int>.generate(32, (_) => Random.secure().nextInt(256));
+    // The second segment is entropy, not a client-verifiable signature. The
+    // backend treats the complete value as an opaque database token.
+    return '${base64UrlEncode(utf8.encode(payload)).replaceAll('=', '')}.'
+        '${base64UrlEncode(nonce).replaceAll('=', '')}';
   }
 }

@@ -1,98 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../../core/di/injection_container.dart';
 import '../../../../../core/theme/app_theme.dart';
-import '../../../../../shared/widgets/primary_button.dart';
 import '../../../../admin/presentation/widgets/admin_page_scaffold.dart';
 import '../../../domain/entities/partner_entity.dart';
 import '../../../domain/entities/partner_service_entity.dart';
-import 'partner_checkin_page.dart';
+import '../../../domain/usecases/partner_service/get_partner_services_usecase.dart';
 
-class PartnerDetailPage extends StatelessWidget {
+class PartnerDetailPage extends StatefulWidget {
   final PartnerEntity partner;
 
   const PartnerDetailPage({super.key, required this.partner});
 
-  // Mock services - will be replaced by BLoC
-  List<PartnerServiceEntity> get _services {
-    switch (partner.id) {
-      case 'partner-001':
-        return const [
-          PartnerServiceEntity(
-            id: 'svc-001',
-            partnerId: 'partner-001',
-            name: 'Hemograma Completo',
-            description: 'Exame de sangue completo com analise de celulas',
-            originalPrice: 80.00,
-            discountedPrice: 56.00,
-            isActive: true,
-          ),
-          PartnerServiceEntity(
-            id: 'svc-002',
-            partnerId: 'partner-001',
-            name: 'Glicemia em Jejum',
-            description: 'Dosagem de glicose no sangue',
-            originalPrice: 25.00,
-            discountedPrice: 17.50,
-            isActive: true,
-          ),
-        ];
-      case 'partner-002':
-        return const [
-          PartnerServiceEntity(
-            id: 'svc-003',
-            partnerId: 'partner-002',
-            name: 'Raio-X Torax',
-            description: 'Radiografia da regiao toracica',
-            originalPrice: 120.00,
-            discountedPrice: 84.00,
-            isActive: true,
-          ),
-          PartnerServiceEntity(
-            id: 'svc-004',
-            partnerId: 'partner-002',
-            name: 'Consulta Clinica Geral',
-            description: 'Consulta medica com clinico geral',
-            originalPrice: 200.00,
-            discountedPrice: 140.00,
-            isActive: true,
-          ),
-        ];
-      case 'partner-003':
-        return const [
-          PartnerServiceEntity(
-            id: 'svc-005',
-            partnerId: 'partner-003',
-            name: 'Exame de Vista',
-            description: 'Avaliacao oftalmologica completa',
-            originalPrice: 150.00,
-            discountedPrice: 105.00,
-            isActive: true,
-          ),
-          PartnerServiceEntity(
-            id: 'svc-006',
-            partnerId: 'partner-003',
-            name: 'Lentes de Contato',
-            description: 'Adaptacao e venda de lentes de contato',
-            originalPrice: 350.00,
-            discountedPrice: 245.00,
-            isActive: true,
-          ),
-        ];
-      default:
-        return const [];
-    }
+  @override
+  State<PartnerDetailPage> createState() => _PartnerDetailPageState();
+}
+
+class _PartnerDetailPageState extends State<PartnerDetailPage> {
+  late Future<List<PartnerServiceEntity>> _servicesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _servicesFuture = _loadServices();
+  }
+
+  Future<List<PartnerServiceEntity>> _loadServices() async {
+    final result = await sl<GetPartnerServicesUseCase>()(widget.partner.id);
+    return result.fold(
+        (failure) => throw Exception(failure.message), (services) => services);
   }
 
   String _categoryLabel(String category) {
     switch (category) {
       case 'laboratorio':
-        return 'Laboratorio';
+        return 'Laboratório';
       case 'clinica':
-        return 'Clinica';
+        return 'Clínica';
       case 'farmacia':
-        return 'Farmacia';
+        return 'Farmácia';
       case 'otica':
-        return 'Otica';
+        return 'Ótica';
       default:
         return 'Outro';
     }
@@ -100,12 +48,44 @@ class PartnerDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final partner = widget.partner;
     return AdminPageScaffold(
       title: partner.name,
       subtitle: _categoryLabel(partner.category),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${partner.discountPercentage.toStringAsFixed(0)}% de desconto',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF4CAF50),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Mostre a carteirinha no caixa. O atendente lê o QR no aparelho dele.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: const Color(0xFF6D7F95),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           // Address
           if (partner.address.isNotEmpty) ...[
             Container(
@@ -141,7 +121,7 @@ class PartnerDetailPage extends StatelessWidget {
 
           // Services section
           Text(
-            'Servicos Disponiveis',
+            'Serviços disponíveis',
             style: GoogleFonts.outfit(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -149,110 +129,127 @@ class PartnerDetailPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _services.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final service = _services[index];
-              final discount = ((1 - service.discountedPrice / service.originalPrice) * 100).round();
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFEBEEF2)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            service.name,
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '-$discount%',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF4CAF50),
-                            ),
-                          ),
-                        ),
-                      ],
+          FutureBuilder<List<PartnerServiceEntity>>(
+            future: _servicesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                return Text(
+                  'Não foi possível carregar os serviços.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: const Color(0xFF6D7F95),
+                  ),
+                );
+              }
+              final services = snapshot.data ?? const [];
+              if (services.isEmpty) {
+                return Text(
+                  'Nenhum serviço com desconto cadastrado ainda.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: const Color(0xFF6D7F95),
+                  ),
+                );
+              }
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: services.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final service = services[index];
+                  final discount = service.originalPrice == 0
+                      ? 0
+                      : ((1 - service.discountedPrice / service.originalPrice) *
+                              100)
+                          .round();
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFEBEEF2)),
                     ),
-                    if (service.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        service.description,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF6D7F95),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'R\$ ${service.originalPrice.toStringAsFixed(2)}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0xFF9EAAB8),
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'R\$ ${service.discountedPrice.toStringAsFixed(2)}',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF4CAF50),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: PrimaryButton(
-                        text: 'Check-in',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PartnerCheckinPage(
-                                partner: partner,
-                                service: service,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                service.name,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryColor,
+                                ),
                               ),
                             ),
-                          );
-                        },
-                      ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4CAF50)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '-$discount%',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF4CAF50),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (service.description.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            service.description,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF6D7F95),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              'R\$ ${service.originalPrice.toStringAsFixed(2)}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF9EAAB8),
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'R\$ ${service.discountedPrice.toStringAsFixed(2)}',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF4CAF50),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),

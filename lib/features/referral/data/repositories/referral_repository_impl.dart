@@ -18,7 +18,7 @@ class ReferralRepositoryImpl implements ReferralRepository {
       final result = await dataSource.getReferralsByUser(userId);
       return Right(result);
     } catch (e) {
-      return Left(ServerFailure('Erro ao buscar indicacoes: ${e.toString()}'));
+      return Left(ServerFailure('Erro ao buscar indicações: ${e.toString()}'));
     }
   }
 
@@ -29,7 +29,7 @@ class ReferralRepositoryImpl implements ReferralRepository {
       final result = await dataSource.createReferral(userId);
       return Right(result);
     } catch (e) {
-      return Left(ServerFailure('Erro ao criar indicacao: ${e.toString()}'));
+      return Left(ServerFailure('Erro ao criar indicação: ${e.toString()}'));
     }
   }
 
@@ -63,7 +63,7 @@ class ReferralRepositoryImpl implements ReferralRepository {
       final result = await dataSource.getReferralCountThisMonth(userId);
       return Right(result);
     } catch (e) {
-      return Left(ServerFailure('Erro ao contar indicacoes: ${e.toString()}'));
+      return Left(ServerFailure('Erro ao contar indicações: ${e.toString()}'));
     }
   }
 

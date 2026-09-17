@@ -46,8 +46,10 @@ dependencies:
   dartz: ^0.10.1              # Either para error handling funcional
   get_it: ^7.6.7              # Injeção de dependências
   shared_preferences: ^2.2.2  # Cache local
+  flutter_secure_storage: ^9.2.4 # Sessão Supabase no Keychain/Keystore
   firebase_core: ^4.4.0
   firebase_auth: ^6.1.4
+  firebase_messaging: ^16.0.4
   google_sign_in: ^6.2.1
   intl: ^0.19.0               # Internacionalização e formatação de datas
   qr_flutter: ^4.1.0           # Geração de QR Code
@@ -59,6 +61,9 @@ dependencies:
   url_launcher: ^6.3.1         # Abrir WhatsApp, telefone, e-mail etc.
   app_links: 6.4.1              # Receber retorno do checkout InfinitePay
   http: 1.6.0                  # Cliente HTTP usado no checkout InfinitePay
+  csv: ^6.0.0                  # Exportação de relatórios (indicações)
+  share_plus: ^10.1.4          # Compartilhar CSV exportado
+  path_provider: ^2.1.5        # Diretório temporário para o CSV exportado
 
 dev_dependencies:
   flutter_test:
@@ -85,6 +90,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/legal/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -114,6 +120,7 @@ flutter:
 
 patrol:
   app_name: Vita Clube
+  test_directory: integration_test
   android:
     package_name: com.example.vita_clube
   ios:

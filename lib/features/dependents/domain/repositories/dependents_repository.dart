@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/dependent_entity.dart';
 import '../entities/dependent_enums.dart';
+import '../entities/pending_dependent_entity.dart';
 
 abstract class DependentsRepository {
   Future<Either<Failure, DependentEntity>> createDependent({
@@ -28,4 +29,13 @@ abstract class DependentsRepository {
   });
 
   Future<Either<Failure, bool>> activeCpfExists(String cpf);
+
+  Future<Either<Failure, List<PendingDependentEntity>>> getPendingDependents();
+
+  Future<Either<Failure, Unit>> approveDependent({required String dependentId});
+
+  Future<Either<Failure, Unit>> rejectDependent({
+    required String dependentId,
+    required String reason,
+  });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/services/subscription_guard.dart';
 import '../../core/theme/app_theme.dart';
+import '../../features/payments/presentation/pages/payments_page.dart';
 
 /// Widget que envolve funcionalidades bloqueadas por inadimplencia.
 /// Exibe um overlay com mensagem quando o acesso e negado.
@@ -63,7 +64,12 @@ class SubscriptionGuardWidget extends StatelessWidget {
                       const SizedBox(height: 12),
                       OutlinedButton(
                         onPressed: () {
-                          // TODO: Navegar para pagina de pagamento
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PaymentsPage(),
+                            ),
+                          );
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppTheme.primaryColor,
@@ -140,7 +146,10 @@ void showSubscriptionBlockedDialog(
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Navegar para pagina de pagamento
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PaymentsPage()),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,

@@ -404,3 +404,6 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.infinitypay-webhook]
 verify_jwt = false
+
+[functions.send-push-campaign]
+verify_jwt = true

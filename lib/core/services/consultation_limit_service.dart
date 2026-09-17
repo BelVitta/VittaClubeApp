@@ -34,9 +34,9 @@ class ConsultationLimitService {
   /// Mensagem de limite
   String get limitMessage {
     if (canScheduleMore) {
-      return 'Voce tem $remainingConsultations consulta(s) restante(s) este mes.';
+      return 'Você tem $remainingConsultations consulta(s) restante(s) este mês.';
     }
-    return 'Voce atingiu o limite de $maxConsultationsPerMonth consultas este mes.';
+    return 'Você atingiu o limite de $maxConsultationsPerMonth consultas este mês.';
   }
 
   /// Retorna o limite padrao por nivel de badge

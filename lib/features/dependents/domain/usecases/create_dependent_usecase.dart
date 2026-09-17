@@ -45,7 +45,9 @@ class CreateDependentUseCase {
     final activeCount = countResult.getOrElse(() => 0);
     if (activeCount >= maxDependents) {
       return const Left(
-        ValidationFailure('Limite de dependentes ativos atingido.'),
+        ValidationFailure(
+          'Limite de dependentes atingido (contando os que aguardam aprovação).',
+        ),
       );
     }
 
@@ -57,7 +59,7 @@ class CreateDependentUseCase {
     if (cpfResult.getOrElse(() => false)) {
       return const Left(
         ValidationFailure(
-          'Este CPF ja esta vinculado a outro dependente ativo.',
+          'Este CPF já está vinculado a outro dependente (ativo ou pendente).',
         ),
       );
     }

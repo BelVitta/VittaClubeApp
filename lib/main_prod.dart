@@ -4,7 +4,10 @@ import 'package:flutter/services.dart';
 import 'core/config/app_config.dart';
 import 'core/config/supabase_config.dart';
 import 'core/di/injection_container.dart' as di;
+import 'core/navigation/app_navigator.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/presentation/widgets/password_recovery_listener.dart';
 import 'features/splash/presentation/pages/splash_page.dart';
 import 'firebase_options.dart';
 
@@ -13,10 +16,11 @@ void main() async {
 
   AppConfig.initProd();
 
-  // Firebase: apenas para Google Sign-In
+  // Firebase: Google Sign-In + FCM
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  installPushBackgroundHandler();
 
   // Supabase: banco real (projeto prod)
   await SupabaseConfig.initialize();
@@ -36,11 +40,14 @@ class VitaClubeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppConfig.instance.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const SplashPage(),
+    return PasswordRecoveryListener(
+      child: MaterialApp(
+        title: AppConfig.instance.appName,
+        debugShowCheckedModeBanner: false,
+        navigatorKey: AppNavigator.key,
+        theme: AppTheme.lightTheme,
+        home: const SplashPage(),
+      ),
     );
   }
 }

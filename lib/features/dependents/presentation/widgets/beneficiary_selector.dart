@@ -41,7 +41,7 @@ class BeneficiarySelector extends StatelessWidget {
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Titular'),
-            subtitle: const Text('Usa a regra de beneficios do titular'),
+            subtitle: const Text('Usa a regra de benefícios do titular'),
             onTap: () => onSelected(const BeneficiarySelection.holder()),
           ),
           ...dependents.map((item) {

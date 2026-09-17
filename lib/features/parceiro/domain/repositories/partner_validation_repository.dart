@@ -3,7 +3,8 @@ import '../../../../core/error/failures.dart';
 import '../entities/partner_validation_entity.dart';
 
 abstract class PartnerValidationRepository {
-  Future<Either<Failure, List<PartnerValidationEntity>>> getByPartnerId(String partnerId);
+  Future<Either<Failure, List<PartnerValidationEntity>>> getByPartnerId(
+      String partnerId);
   Future<Either<Failure, PartnerValidationEntity>> validateCheckin({
     required String userId,
     required String token,
@@ -11,4 +12,11 @@ abstract class PartnerValidationRepository {
     required String serviceId,
   });
   Future<Either<Failure, String>> generateToken(String userId);
+  Future<Either<Failure, Map<String, dynamic>>> confirmValidation({
+    required String holderUserId,
+    required String memberName,
+    String? dependentId,
+    double? originalValue,
+    String? planLevel,
+  });
 }

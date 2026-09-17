@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/legal_document_page.dart';
 import '../widgets/profile_menu_item.dart';
 
 /// Página de Privacidade e Dados
@@ -98,16 +99,12 @@ class PrivacyDataPage extends StatelessWidget {
                         // Menu items
                         ProfileMenuItem(
                           title: 'Política de Privacidade',
-                          onTap: () {
-                            // TODO: Open privacy policy
-                          },
+                          onTap: () => LegalDocumentPage.openPrivacy(context),
                         ),
                         const SizedBox(height: 8),
                         ProfileMenuItem(
                           title: 'Termos de Uso',
-                          onTap: () {
-                            // TODO: Open terms of use
-                          },
+                          onTap: () => LegalDocumentPage.openTerms(context),
                         ),
                         const SizedBox(height: 8),
 
@@ -143,7 +140,9 @@ class PrivacyDataPage extends StatelessWidget {
           ),
         ),
         content: Text(
-          'Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.',
+          'O pedido de exclusão segue a LGPD. Envie um e-mail ao encarregado '
+          'indicado na Política de Privacidade. Até a exclusão automática '
+          'estar disponível no app, o atendimento confirma o pedido em até 15 dias.',
           style: GoogleFonts.outfit(
             fontSize: 14,
             color: const Color(0xFF6D7F95),
@@ -160,7 +159,7 @@ class PrivacyDataPage extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Process account deletion
+              LegalDocumentPage.openPrivacy(context);
             },
             child: Text(
               'Excluir',

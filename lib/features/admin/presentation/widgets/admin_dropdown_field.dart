@@ -46,9 +46,9 @@ class AdminDropdownField extends StatelessWidget {
             border: Border.all(color: const Color(0xFFDDDFE5)),
           ),
           child: DropdownButtonFormField<String>(
-            initialValue: value != null && items.any((i) => i.id == value)
-                ? value
-                : null,
+            initialValue:
+                value != null && items.any((i) => i.id == value) ? value : null,
+            menuMaxHeight: 300,
             items: items
                 .map((item) => DropdownMenuItem<String>(
                       value: item.id,
@@ -72,8 +72,9 @@ class AdminDropdownField extends StatelessWidget {
             },
             decoration: InputDecoration(
               border: InputBorder.none,
+              isDense: true,
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               hintText: hint ?? 'Selecione...',
               hintStyle: GoogleFonts.outfit(
                 fontSize: 13,

@@ -5,7 +5,8 @@ import '../../../domain/usecases/partner_validation/validate_checkin_usecase.dar
 import 'partner_checkin_event.dart';
 import 'partner_checkin_state.dart';
 
-class PartnerCheckinBloc extends Bloc<PartnerCheckinEvent, PartnerCheckinState> {
+class PartnerCheckinBloc
+    extends Bloc<PartnerCheckinEvent, PartnerCheckinState> {
   final GenerateTokenUseCase generateTokenUseCase;
   final ValidateCheckinUseCase validateCheckinUseCase;
 
@@ -17,7 +18,8 @@ class PartnerCheckinBloc extends Bloc<PartnerCheckinEvent, PartnerCheckinState> 
     on<SubmitPartnerCode>(_onSubmitCode);
   }
 
-  Future<void> _onGenerateToken(GenerateCheckinToken event, Emitter<PartnerCheckinState> emit) async {
+  Future<void> _onGenerateToken(
+      GenerateCheckinToken event, Emitter<PartnerCheckinState> emit) async {
     emit(state.copyWith(status: PartnerCheckinStatus.generatingToken));
     final result = await generateTokenUseCase(event.userId);
     result.fold(
@@ -33,7 +35,8 @@ class PartnerCheckinBloc extends Bloc<PartnerCheckinEvent, PartnerCheckinState> 
     );
   }
 
-  Future<void> _onSubmitCode(SubmitPartnerCode event, Emitter<PartnerCheckinState> emit) async {
+  Future<void> _onSubmitCode(
+      SubmitPartnerCode event, Emitter<PartnerCheckinState> emit) async {
     emit(state.copyWith(status: PartnerCheckinStatus.validating));
     final result = await validateCheckinUseCase(
       userId: event.userId,

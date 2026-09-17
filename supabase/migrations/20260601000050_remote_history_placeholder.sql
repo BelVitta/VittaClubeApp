@@ -1,0 +1,5 @@
+-- Placeholder de histórico de migrations (versão 20260601000050).
+-- NÃO renomear para versão curta tipo "20260601" — o CLI do Supabase
+-- não casa versões curtas local↔remoto e o `db push` falha com:
+--   "Remote migration versions not found in local migrations directory."
+-- Não altera o schema.

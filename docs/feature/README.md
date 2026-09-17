@@ -19,6 +19,7 @@ Documentação resumida de cada feature do painel administrativo, com foco em **
 | Sorteios | ⚠️ só visualizar | ✅ criar/sortear | [sorteios.md](sorteios.md) |
 | Cupons | ✅ aplicar | ✅ criar/editar | [cupons.md](cupons.md) |
 | Scanner QR | ✅ | ✅ | [scanner_qr.md](scanner_qr.md) |
+| Indicação recepcionista / ranking | ✅ ranking | ✅ lista + correção | [indicacao_recepcionista.md](indicacao_recepcionista.md) |
 | Motivos Cancelamento | ⚠️ só ler | ✅ editar | [motivos_cancelamento.md](motivos_cancelamento.md) |
 | **Super Admin (extras)** | ❌ | ✅ | [super_admin.md](super_admin.md) |
 

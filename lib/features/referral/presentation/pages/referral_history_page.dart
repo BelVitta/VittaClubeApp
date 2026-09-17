@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/referral_entity.dart';
@@ -15,8 +16,9 @@ class ReferralHistoryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userId = SupabaseConfig.client.auth.currentUser?.id ?? '';
     return BlocProvider(
-      create: (_) => sl<ReferralBloc>()..add(const LoadReferrals('user_1')),
+      create: (_) => sl<ReferralBloc>()..add(LoadReferrals(userId)),
       child: const _ReferralHistoryView(),
     );
   }
@@ -45,7 +47,7 @@ class _ReferralHistoryViewState extends State<_ReferralHistoryView> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Historico de Indicacoes',
+          'Histórico de indicações',
           style: GoogleFonts.outfit(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -90,7 +92,7 @@ class _ReferralHistoryViewState extends State<_ReferralHistoryView> {
                 child: filtered.isEmpty
                     ? Center(
                         child: Text(
-                          'Nenhuma indicacao encontrada.',
+                          'Nenhuma indicação encontrada.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             color: AppTheme.secondaryText,

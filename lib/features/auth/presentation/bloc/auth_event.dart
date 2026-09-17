@@ -56,6 +56,14 @@ class ConfirmPasswordChanged extends AuthEvent {
   List<Object?> get props => [confirmPassword];
 }
 
+class ReceptionistCodeChanged extends AuthEvent {
+  final String receptionistCode;
+  const ReceptionistCodeChanged(this.receptionistCode);
+
+  @override
+  List<Object?> get props => [receptionistCode];
+}
+
 // Eventos de visibilidade de senha
 class TogglePasswordVisibility extends AuthEvent {}
 

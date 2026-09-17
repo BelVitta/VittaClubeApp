@@ -165,14 +165,14 @@ class _AdminConsultationFormPageState extends State<AdminConsultationFormPage> {
                 child: Column(
                   children: [
                     AdminFormField(
-                      label: 'Titulo',
+                      label: 'Título',
                       controller: _titleController,
                       validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Titulo obrigatorio' : null,
+                          (v == null || v.trim().isEmpty) ? 'Título obrigatório' : null,
                     ),
                     const SizedBox(height: 16),
                     AdminFormField(
-                      label: 'Subtitulo',
+                      label: 'Subtítulo',
                       controller: _subtitleController,
                     ),
                     const SizedBox(height: 16),
@@ -218,9 +218,9 @@ class _AdminConsultationFormPageState extends State<AdminConsultationFormPage> {
                       ),
                       const SizedBox(height: 16),
                       AdminDropdownField(
-                        label: 'Usuario',
+                        label: 'Usuário',
                         value: _selectedUserId,
-                        hint: 'Selecione o usuario',
+                        hint: 'Selecione o usuário',
                         items: _users
                             .map((u) => DropdownItem(
                                   id: u.id,

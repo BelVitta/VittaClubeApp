@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 
-/// Widget de item de notificação com estados lido/não lido
+/// Item da caixa de entrada com estados lido/não lido.
 class NotificationItem extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool isUnread;
-  final VoidCallback? onDelete;
   final VoidCallback? onTap;
 
   const NotificationItem({
@@ -15,7 +14,6 @@ class NotificationItem extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.isUnread = false,
-    this.onDelete,
     this.onTap,
   });
 
@@ -32,14 +30,11 @@ class NotificationItem extends StatelessWidget {
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isUnread
-                ? const Color(0xFF7E9CBB)
-                : const Color(0xFFEBEEF2),
+            color: isUnread ? const Color(0xFF7E9CBB) : const Color(0xFFEBEEF2),
           ),
         ),
         child: Row(
           children: [
-            // Badge icon
             Container(
               width: 25,
               height: 25,
@@ -54,8 +49,6 @@ class NotificationItem extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-
-            // Text content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +73,8 @@ class NotificationItem extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4678CF).withValues(alpha: 0.15),
+                            color:
+                                const Color(0xFF4678CF).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -106,20 +100,6 @@ class NotificationItem extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Delete icon
-            if (onDelete != null)
-              GestureDetector(
-                onTap: onDelete,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Icon(
-                    Icons.delete_outline,
-                    size: 18,
-                    color: AppTheme.primaryColor.withValues(alpha: 0.4),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

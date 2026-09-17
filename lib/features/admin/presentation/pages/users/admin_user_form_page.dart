@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/di/injection_container.dart';
+import '../../../../../core/config/supabase_config.dart';
 import '../../../../../core/utils/validators.dart';
 import '../../../../../shared/widgets/primary_button.dart';
 import '../../widgets/admin_page_scaffold.dart';
@@ -44,11 +46,23 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
 
   List<PlanAdminEntity> _plans = [];
   bool _loadingPlans = true;
+  bool _isFinanceiro = false;
 
-  static const _statusOptions = ['ativo', 'inativo', 'inadimplente', 'cancelado'];
-  static const _levelOptions = ['Bronze', 'Prata', 'Ouro', 'Diamante', 'Sem plano'];
+  static const _statusOptions = [
+    'ativo',
+    'inativo',
+    'inadimplente',
+    'cancelado'
+  ];
+  static const _levelOptions = [
+    'Bronze',
+    'Prata',
+    'Ouro',
+    'Diamante',
+    'Sem plano'
+  ];
   static const _roleOptions = [
-    {'value': 'user', 'label': 'Usuario'},
+    {'value': 'user', 'label': 'Usuário'},
     {'value': 'admin', 'label': 'Administrador'},
     {'value': 'financeiro', 'label': 'Financeiro'},
     {'value': 'parceiro', 'label': 'Parceiro'},
@@ -57,32 +71,58 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.entity?.name ?? '');
-    _emailController =
-        TextEditingController(text: widget.entity?.email ?? '');
-    _cpfController =
-        TextEditingController(text: widget.entity?.cpf ?? '');
-    _phoneController =
-        TextEditingController(text: widget.entity?.phone ?? '');
+    _nameController = TextEditingController(text: widget.entity?.name ?? '');
+    _emailController = TextEditingController(text: widget.entity?.email ?? '');
+    _cpfController = TextEditingController(text: widget.entity?.cpf ?? '');
+    _phoneController = TextEditingController(text: widget.entity?.phone ?? '');
     _selectedPlanId = widget.entity?.currentPlanId;
     _selectedPlanLevel = widget.entity?.planLevelName ?? '';
     _selectedStatus = widget.entity?.status ?? 'ativo';
     _selectedRole = widget.entity?.role ?? 'user';
 
-    // Parse memberSince date
-    if (widget.entity?.memberSince != null && widget.entity!.memberSince.isNotEmpty) {
+    // Parse memberSince date (vem do Supabase em ISO 8601/timestamptz)
+    if (widget.entity?.memberSince != null &&
+        widget.entity!.memberSince.isNotEmpty) {
       try {
-        _memberSinceDate = DateFormat('dd/MM/yyyy').parse(widget.entity!.memberSince);
+        _memberSinceDate = DateTime.parse(widget.entity!.memberSince);
       } catch (_) {
         // fallback - keep text as-is
       }
     }
     _memberSinceController = TextEditingController(
-      text: widget.entity?.memberSince ?? '',
+      text: _memberSinceDate != null
+          ? DateFormat('dd/MM/yyyy').format(_memberSinceDate!)
+          : (widget.entity?.memberSince ?? ''),
     );
 
     _loadPlans();
+    _loadAccessAndSensitiveData();
+  }
+
+  Future<void> _loadAccessAndSensitiveData() async {
+    try {
+      final currentUser = SupabaseConfig.client.auth.currentUser;
+      if (currentUser == null) return;
+      final caller = await SupabaseConfig.client
+          .from('profiles')
+          .select('role')
+          .eq('id', currentUser.id)
+          .single();
+      final isFinanceiro = caller['role'] == 'financeiro';
+
+      if (widget.isEditing) {
+        final fullUser =
+            await sl<AdminDataSource>().getUserById(widget.entity!.id);
+        if (!mounted) return;
+        _cpfController.text = fullUser.cpf;
+        _phoneController.text = fullUser.phone;
+      }
+
+      if (mounted) setState(() => _isFinanceiro = isFinanceiro);
+    } catch (_) {
+      // Campos sensíveis permanecem vazios/máscarados quando o servidor nega
+      // acesso; nunca usamos a máscara como valor editável.
+    }
   }
 
   Future<void> _loadPlans() async {
@@ -148,7 +188,7 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
       planLevelName: _selectedPlanLevel,
       status: _selectedStatus,
       memberSince: _memberSinceController.text.trim(),
-      role: _selectedRole,
+      role: _isFinanceiro ? _selectedRole : (widget.entity?.role ?? 'user'),
     );
 
     if (widget.isEditing) {
@@ -166,13 +206,12 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
           Navigator.pop(context);
         } else if (state.status == UserAdminStatus.failure) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(state.errorMessage ?? 'Erro ao salvar')),
+            SnackBar(content: Text(state.errorMessage ?? 'Erro ao salvar')),
           );
         }
       },
       child: AdminPageScaffold(
-        title: widget.isEditing ? 'Editar Usuario' : 'Novo Usuario',
+        title: widget.isEditing ? 'Editar usuário' : 'Novo usuário',
         body: Form(
           key: _formKey,
           child: Column(
@@ -184,8 +223,10 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
                       label: 'Nome',
                       controller: _nameController,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Nome obrigatorio';
-                        if (!Validators.isValidName(v)) return 'Minimo 3 caracteres';
+                        if (v == null || v.trim().isEmpty)
+                          return 'Nome obrigatório';
+                        if (!Validators.isValidName(v))
+                          return 'Mínimo 3 caracteres';
                         return null;
                       },
                     ),
@@ -195,8 +236,10 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'E-mail obrigatorio';
-                        if (!Validators.isValidEmail(v.trim())) return 'E-mail invalido';
+                        if (v == null || v.trim().isEmpty)
+                          return 'E-mail obrigatório';
+                        if (!Validators.isValidEmail(v.trim()))
+                          return 'E-mail inválido';
                         return null;
                       },
                     ),
@@ -206,8 +249,10 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
                       controller: _cpfController,
                       keyboardType: TextInputType.number,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'CPF obrigatorio';
-                        if (!Validators.isValidCpf(v.trim())) return 'CPF invalido (11 digitos)';
+                        if (v == null || v.trim().isEmpty)
+                          return 'CPF obrigatório';
+                        if (!Validators.isValidCpf(v.trim()))
+                          return 'CPF inválido (11 digitos)';
                         return null;
                       },
                     ),
@@ -217,8 +262,10 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Telefone obrigatorio';
-                        if (!Validators.isValidPhone(v.trim())) return 'Telefone invalido';
+                        if (v == null || v.trim().isEmpty)
+                          return 'Telefone obrigatório';
+                        if (!Validators.isValidPhone(v.trim()))
+                          return 'Telefone inválido';
                         return null;
                       },
                     ),
@@ -251,11 +298,11 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
                       ),
                     const SizedBox(height: 16),
                     AdminDropdownField(
-                      label: 'Nivel do Plano',
+                      label: 'Nível do plano',
                       value: _selectedPlanLevel.isNotEmpty
                           ? _selectedPlanLevel
                           : null,
-                      hint: 'Selecione o nivel',
+                      hint: 'Selecione o nível',
                       items: _levelOptions
                           .map((l) => DropdownItem(id: l, displayName: l))
                           .toList(),
@@ -279,21 +326,78 @@ class _AdminUserFormPageState extends State<AdminUserFormPage> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    AdminDropdownField(
-                      label: 'Role',
-                      value: _selectedRole,
-                      items: _roleOptions
-                          .map((r) => DropdownItem(
-                                id: r['value']!,
-                                displayName: r['label']!,
-                              ))
-                          .toList(),
-                      onChanged: (item) {
-                        setState(() {
-                          _selectedRole = item?.id ?? 'user';
-                        });
-                      },
-                    ),
+                    if (_isFinanceiro) ...[
+                      AdminDropdownField(
+                        label: 'Role',
+                        value: _selectedRole,
+                        items: _roleOptions
+                            .map((r) => DropdownItem(
+                                  id: r['value']!,
+                                  displayName: r['label']!,
+                                ))
+                            .toList(),
+                        onChanged: (item) {
+                          setState(() {
+                            _selectedRole = item?.id ?? 'user';
+                          });
+                        },
+                      ),
+                    ],
+                    if (_isFinanceiro &&
+                        _selectedRole == 'admin' &&
+                        widget.entity?.receptionistCode != null) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F6FA),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE0E4EC)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Código de indicação (recepcionista)',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.primaryColor
+                                          .withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    widget.entity!.receptionistCode!,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.primaryColor,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy_outlined,
+                                  size: 18, color: AppTheme.primaryColor),
+                              tooltip: 'Copiar código',
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(
+                                    text: widget.entity!.receptionistCode!));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Código copiado!')),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     GestureDetector(
                       onTap: _pickMemberSince,

@@ -67,7 +67,7 @@ class _DependentFormState extends State<DependentForm> {
             keyboardType: TextInputType.number,
             decoration: AppTheme.inputDecoration(label: 'CPF'),
             validator: (value) =>
-                Validators.isValidCpf(value ?? '') ? null : 'CPF invalido.',
+                Validators.isValidCpf(value ?? '') ? null : 'CPF inválido.',
           ),
           const SizedBox(height: 12),
           TextFormField(

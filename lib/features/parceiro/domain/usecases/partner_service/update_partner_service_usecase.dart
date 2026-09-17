@@ -8,6 +8,7 @@ class UpdatePartnerServiceUseCase {
 
   UpdatePartnerServiceUseCase(this.repository);
 
-  Future<Either<Failure, PartnerServiceEntity>> call(PartnerServiceEntity entity) =>
+  Future<Either<Failure, PartnerServiceEntity>> call(
+          PartnerServiceEntity entity) =>
       repository.update(entity);
 }

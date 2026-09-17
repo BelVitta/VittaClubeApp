@@ -90,3 +90,4 @@ android/app/upload-keystore.jks
 
 # Segredos locais — nunca commitar
 supabase.env
+supabase/.secrets/

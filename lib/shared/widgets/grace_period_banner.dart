@@ -41,7 +41,7 @@ class GracePeriodBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Periodo de Carencia',
+                  'Período de carência',
                   style: GoogleFonts.outfit(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -50,7 +50,7 @@ class GracePeriodBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${service.remainingGraceDays} dia(s) restante(s) para liberar todos os beneficios.',
+                  '${service.remainingGraceDays} dia(s) restante(s) para liberar todos os benefícios.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: AppTheme.secondaryText,

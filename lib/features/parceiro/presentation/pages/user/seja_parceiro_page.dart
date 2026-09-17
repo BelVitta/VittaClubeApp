@@ -5,14 +5,14 @@ import '../../../../../shared/widgets/primary_button.dart';
 import '../../../../admin/presentation/widgets/admin_page_scaffold.dart';
 import 'parceiro_register_page.dart';
 
-class SejaParcerioPage extends StatelessWidget {
-  const SejaParcerioPage({super.key});
+class SejaParceiroPage extends StatelessWidget {
+  const SejaParceiroPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return AdminPageScaffold(
-      title: 'Seja Parceiro',
-      subtitle: 'Faca parte da rede Vita Clube',
+      title: 'Seja parceiro',
+      subtitle: 'Faça parte da rede Vita Clube',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -83,9 +83,9 @@ class SejaParcerioPage extends StatelessWidget {
           const SizedBox(height: 8),
           _buildStep(
             number: '2',
-            title: 'Configure seus servicos',
+            title: 'Configure seus serviços',
             description:
-                'Adicione exames, consultas ou produtos com precos e descontos exclusivos para membros.',
+                'Adicione exames, consultas ou produtos com preços e descontos exclusivos para membros.',
             icon: Icons.medical_services_outlined,
           ),
           const SizedBox(height: 8),
@@ -101,14 +101,14 @@ class SejaParcerioPage extends StatelessWidget {
             number: '4',
             title: 'Valide descontos',
             description:
-                'O cliente gera um token no app, voce informa seu codigo e o desconto e validado com seguranca.',
+                'O cliente gera um token no app, você informa seu código e o desconto é validado com segurança.',
             icon: Icons.verified_outlined,
           ),
           const SizedBox(height: 24),
 
-          // Beneficios
+          // Benefícios
           Text(
-            'Beneficios para parceiros',
+            'Benefícios para parceiros',
             style: GoogleFonts.outfit(
               fontSize: 17,
               fontWeight: FontWeight.w600,
@@ -135,14 +135,14 @@ class SejaParcerioPage extends StatelessWidget {
             icon: Icons.dashboard_outlined,
             title: 'Painel exclusivo',
             description:
-                'Gerencie servicos, veja validacoes e acompanhe metricas em tempo real.',
+                'Gerencie serviços, veja validações e acompanhe métricas em tempo real.',
           ),
           const SizedBox(height: 8),
           _buildBenefit(
             icon: Icons.security_outlined,
-            title: 'Validacao segura',
+            title: 'Validação segura',
             description:
-                'Sistema de dois fatores (token + codigo) garante que apenas membros usem os descontos.',
+                'Sistema de dois fatores (token + código) garante que apenas membros usem os descontos.',
           ),
           const SizedBox(height: 32),
 
@@ -232,7 +232,7 @@ class SejaParcerioPage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Voce e profissional de saude e quer atender\npacientes do Vita Clube? Entre em contato\ncom a clinica parceira mais proxima para\nse cadastrar como especialista.',
+            'Você é profissional de saúde e quer atender\npacientes do Vita Clube? Entre em contato\ncom a clínica parceira mais próxima para\nse cadastrar como especialista.',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
@@ -247,7 +247,7 @@ class SejaParcerioPage extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Em breve voce podera entrar em contato diretamente pelo app.',
+                    'Em breve você poderá entrar em contato diretamente pelo app.',
                     style: GoogleFonts.plusJakartaSans(fontSize: 13),
                   ),
                   backgroundColor: AppTheme.primaryColor,

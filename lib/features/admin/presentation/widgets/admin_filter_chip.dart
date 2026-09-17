@@ -39,8 +39,7 @@ class AdminFilterChip extends StatelessWidget {
             Icon(
               icon,
               size: 14,
-              color:
-                  isActive ? AppTheme.primaryColor : const Color(0xFF6D7F95),
+              color: isActive ? AppTheme.primaryColor : const Color(0xFF6D7F95),
             ),
             const SizedBox(width: 6),
             Text(
@@ -74,64 +73,79 @@ class AdminFilterChip extends StatelessWidget {
       ),
       builder: (bottomContext) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Text(
-                  title,
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-              ),
-              if (current != null)
-                ListTile(
-                  leading:
-                      const Icon(Icons.clear, color: Colors.red, size: 20),
-                  title: Text(
-                    'Remover filtro',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      color: Colors.red,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(bottomContext).size.height * 0.6,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                  child: Text(
+                    title,
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryColor,
                     ),
                   ),
-                  onTap: () {
-                    onSelected(null);
-                    Navigator.pop(bottomContext);
-                  },
                 ),
-              ...options.map((option) => ListTile(
-                    leading: Icon(
-                      current == option
-                          ? Icons.check_circle
-                          : Icons.circle_outlined,
-                      color: current == option
-                          ? AppTheme.primaryColor
-                          : const Color(0xFF6D7F95),
-                      size: 20,
-                    ),
-                    title: Text(
-                      displayNames?[option] ?? (option[0].toUpperCase() + option.substring(1)),
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: current == option
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    onTap: () {
-                      onSelected(option);
-                      Navigator.pop(bottomContext);
-                    },
-                  )),
-              const SizedBox(height: 8),
-            ],
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    children: [
+                      if (current != null)
+                        ListTile(
+                          leading: const Icon(Icons.clear,
+                              color: Colors.red, size: 20),
+                          title: Text(
+                            'Remover filtro',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              color: Colors.red,
+                            ),
+                          ),
+                          onTap: () {
+                            onSelected(null);
+                            Navigator.pop(bottomContext);
+                          },
+                        ),
+                      ...options.map((option) => ListTile(
+                            leading: Icon(
+                              current == option
+                                  ? Icons.check_circle
+                                  : Icons.circle_outlined,
+                              color: current == option
+                                  ? AppTheme.primaryColor
+                                  : const Color(0xFF6D7F95),
+                              size: 20,
+                            ),
+                            title: Text(
+                              displayNames?[option] ??
+                                  (option[0].toUpperCase() +
+                                      option.substring(1)),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: current == option
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                            onTap: () {
+                              onSelected(option);
+                              Navigator.pop(bottomContext);
+                            },
+                          )),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         );
       },

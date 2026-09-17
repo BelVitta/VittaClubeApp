@@ -17,10 +17,19 @@ class AuthSessionManager {
   final GoTrueClient? authClient;
   final Duration sessionTtl;
 
+  /// Encerra sessões de providers externos (ex.: Google Sign-In).
+  /// Sem isso, o próximo login Google reutiliza a conta anterior.
+  final Future<void> Function()? signOutExternalProviders;
+
+  /// Remove o token FCM enquanto a sessão ainda está autenticada.
+  final Future<void> Function()? beforeSignOut;
+
   AuthSessionManager({
     required this.sharedPreferences,
     required this.authClient,
     this.sessionTtl = const Duration(hours: 24),
+    this.signOutExternalProviders,
+    this.beforeSignOut,
   });
 
   Future<void> saveSession(
@@ -77,12 +86,24 @@ class AuthSessionManager {
   }
 
   Future<void> clearSession() async {
+    try {
+      await beforeSignOut?.call();
+    } catch (_) {
+      // Push não pode bloquear o logout.
+    }
+
     await clearLocalSession();
 
     try {
       await authClient?.signOut();
     } catch (_) {
       // A limpeza local é obrigatória; falha no signOut remoto não deve travar.
+    }
+
+    try {
+      await signOutExternalProviders?.call();
+    } catch (_) {
+      // Google Sign-In (e similares) não pode bloquear o logout do app.
     }
   }
 }

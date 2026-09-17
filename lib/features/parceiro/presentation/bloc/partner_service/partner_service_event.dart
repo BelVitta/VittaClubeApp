@@ -49,7 +49,8 @@ class DeletePartnerServiceRequested extends PartnerServiceEvent {
   final String id;
   final String partnerId;
 
-  const DeletePartnerServiceRequested({required this.id, required this.partnerId});
+  const DeletePartnerServiceRequested(
+      {required this.id, required this.partnerId});
 
   @override
   List<Object?> get props => [id, partnerId];

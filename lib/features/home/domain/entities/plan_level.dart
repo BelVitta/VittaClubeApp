@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 /// Enum que representa os níveis de plano disponíveis
 enum PlanLevel {
-  none('Sem plano', 'Bronze', Color(0xFFF6F6F6), Color(0xFFF6F6F6)),
+  /// Sem assinatura: badge sem cor (cinza neutro).
+  none('Sem plano', 'Bronze', Color(0xFFB0B8C1), Color(0xFFEBEEF2)),
+
+  /// Patentes ativas — cada uma com a cor da patente.
   bronze('Bronze', 'Prata', Color(0xFFC25C3C), Color(0xFFCFDAED)),
   silver('Prata', 'Ouro', Color(0xFFC0C0C0), Color(0xFFE8E8E8)),
   gold('Ouro', 'Diamante', Color(0xFFFFD700), Color(0xFFFFF4D1)),
-  diamond('Diamante', 'Diamante', Color(0xFFB9F2FF), Color(0xFFE3F8FF)),
+  diamond('Diamante', 'Diamante', Color(0xFF4FC3F7), Color(0xFFE3F8FF)),
   inadimplente('Pendente', '', Color(0xFFE8872B), Color(0xFFFDE4CC)),
   cancelado('Cancelado', '', Color(0xFF6D7F95), Color(0xFFE0E3E7));
 
@@ -46,17 +49,20 @@ enum PlanLevel {
   String getStatusText() {
     switch (this) {
       case PlanLevel.none:
-        return 'Assine Vita Clube';
+        return 'Sem plano ativo';
       case PlanLevel.inadimplente:
         return 'Inadimplente';
       case PlanLevel.cancelado:
         return 'Cancelado';
       default:
-        return 'Ativo';
+        return 'Patente ativa';
     }
   }
 
   /// Verifica se é um estado de problema (inadimplente ou cancelado)
   bool get isNegativeState =>
       this == PlanLevel.inadimplente || this == PlanLevel.cancelado;
+
+  /// Sem assinatura — badge visualmente “sem cor”.
+  bool get isColorless => this == PlanLevel.none;
 }

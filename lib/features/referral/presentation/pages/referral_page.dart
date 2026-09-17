@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../bloc/referral_bloc.dart';
@@ -9,21 +11,24 @@ import '../bloc/referral_state.dart';
 import '../widgets/referral_code_card.dart';
 import '../widgets/referral_item.dart';
 
-/// Pagina principal de indicacoes - "Indique e Ganhe".
+/// Página principal de indicações - "Indique e Ganhe".
 class ReferralPage extends StatelessWidget {
   const ReferralPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final userId = SupabaseConfig.client.auth.currentUser?.id ?? '';
     return BlocProvider(
-      create: (_) => sl<ReferralBloc>()..add(const LoadReferrals('user_1')),
-      child: const _ReferralView(),
+      create: (_) => sl<ReferralBloc>()..add(LoadReferrals(userId)),
+      child: _ReferralView(userId: userId),
     );
   }
 }
 
 class _ReferralView extends StatelessWidget {
-  const _ReferralView();
+  final String userId;
+
+  const _ReferralView({required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +57,7 @@ class _ReferralView extends StatelessWidget {
           if (state.status == ReferralBlocStatus.created) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Codigo de indicacao criado!'),
+                content: Text('Código de indicação criado!'),
                 backgroundColor: AppTheme.successColor,
               ),
             );
@@ -64,7 +69,7 @@ class _ReferralView extends StatelessWidget {
                 backgroundColor: AppTheme.successColor,
               ),
             );
-            context.read<ReferralBloc>().add(const LoadReferrals('user_1'));
+            context.read<ReferralBloc>().add(LoadReferrals(userId));
           }
           if (state.status == ReferralBlocStatus.failure) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -96,10 +101,16 @@ class _ReferralView extends StatelessWidget {
                   onGenerateCode: () {
                     context
                         .read<ReferralBloc>()
-                        .add(const CreateReferralRequested('user_1'));
+                        .add(CreateReferralRequested(userId));
                   },
                   onShare: () {
-                    // TODO: Implementar share nativo
+                    final code = state.lastCreated?.referralCode;
+                    if (code == null || code.isEmpty) return;
+                    Share.share(
+                      'Use meu código $code e ganhe benefícios no '
+                      'Vita Clube! Baixe o app e cadastre-se com esse '
+                      'código.',
+                    );
                   },
                 ),
                 const SizedBox(height: 24),
@@ -108,7 +119,7 @@ class _ReferralView extends StatelessWidget {
                 const SizedBox(height: 24),
                 // History
                 Text(
-                  'Historico de Indicacoes',
+                  'Histórico de indicações',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -211,14 +222,14 @@ class _ReferralView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          _buildRuleItem('1', 'Compartilhe seu codigo com amigos'),
-          _buildRuleItem('2', 'Seu amigo se cadastra usando o codigo'),
+          _buildRuleItem('1', 'Compartilhe seu código com amigos'),
+          _buildRuleItem('2', 'Seu amigo se cadastra usando o código'),
           _buildRuleItem('3', 'Ele deve permanecer ativo por 60 dias'),
           _buildRuleItem('4', 'E realizar pelo menos 1 consulta'),
-          _buildRuleItem('5', 'Voce recebe creditos como recompensa!'),
+          _buildRuleItem('5', 'Você recebe créditos como recompensa!'),
           const SizedBox(height: 8),
           Text(
-            'Limite: 10 indicacoes por mes',
+            'Limite: 10 indicações por mês',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               color: AppTheme.secondaryText,
@@ -279,7 +290,7 @@ class _ReferralView extends StatelessWidget {
                 size: 48, color: AppTheme.secondaryText.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
             Text(
-              'Nenhuma indicacao ainda',
+              'Nenhuma indicação ainda',
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 color: AppTheme.secondaryText,
@@ -287,7 +298,7 @@ class _ReferralView extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Gere um codigo e compartilhe com amigos!',
+              'Gere um código e compartilhe com amigos!',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: AppTheme.secondaryText,

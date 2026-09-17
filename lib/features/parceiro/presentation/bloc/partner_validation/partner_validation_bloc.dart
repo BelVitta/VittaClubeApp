@@ -4,7 +4,8 @@ import '../../../domain/usecases/partner_validation/get_partner_validations_usec
 import 'partner_validation_event.dart';
 import 'partner_validation_state.dart';
 
-class PartnerValidationBloc extends Bloc<PartnerValidationEvent, PartnerValidationState> {
+class PartnerValidationBloc
+    extends Bloc<PartnerValidationEvent, PartnerValidationState> {
   final GetPartnerValidationsUseCase getPartnerValidationsUseCase;
 
   PartnerValidationBloc({
@@ -14,7 +15,8 @@ class PartnerValidationBloc extends Bloc<PartnerValidationEvent, PartnerValidati
     on<SearchPartnerValidations>(_onSearch);
   }
 
-  Future<void> _onLoad(LoadPartnerValidations event, Emitter<PartnerValidationState> emit) async {
+  Future<void> _onLoad(LoadPartnerValidations event,
+      Emitter<PartnerValidationState> emit) async {
     emit(state.copyWith(status: PartnerValidationStatus.loading));
     final result = await getPartnerValidationsUseCase(event.partnerId);
     result.fold(
@@ -30,7 +32,8 @@ class PartnerValidationBloc extends Bloc<PartnerValidationEvent, PartnerValidati
     );
   }
 
-  void _onSearch(SearchPartnerValidations event, Emitter<PartnerValidationState> emit) {
+  void _onSearch(
+      SearchPartnerValidations event, Emitter<PartnerValidationState> emit) {
     final query = event.query.toLowerCase();
     if (query.isEmpty) {
       emit(state.copyWith(searchQuery: '', filteredItems: state.items));

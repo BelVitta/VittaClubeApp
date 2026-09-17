@@ -57,7 +57,7 @@ class _SpecialtyFilterSheetState extends State<SpecialtyFilterSheet> {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.78,
+        maxHeight: MediaQuery.of(context).size.height * 0.5,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -171,9 +171,7 @@ class _SpecialtyFilterSheetState extends State<SpecialtyFilterSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: isSelected
-              ? Border.all(color: AppTheme.primaryColor)
-              : null,
+          border: isSelected ? Border.all(color: AppTheme.primaryColor) : null,
         ),
         child: Row(
           children: [

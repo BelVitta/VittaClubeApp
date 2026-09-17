@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../domain/usecases/request_password_reset_usecase.dart';
 import '../widgets/custom_text_field.dart';
-import 'verify_code_page.dart';
 
-/// Tela de Esqueci a Senha - Solicita email do usuário
+/// Solicita e-mail de recuperação (Supabase Auth + SMTP/Resend).
+/// O Supabase envia um **link**, não um código de 6 dígitos.
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -19,6 +22,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
 
   final _emailController = TextEditingController();
   bool _isLoading = false;
+  bool _emailSent = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -40,45 +45,38 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     super.dispose();
   }
 
-  void _sendCode() async {
-    if (_emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, insira seu email')),
-      );
-      return;
-    }
+  Future<void> _sendResetEmail() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+    });
 
-    // TODO: Validar email
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(_emailController.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, insira um email válido')),
-      );
-      return;
-    }
+    final result =
+        await sl<RequestPasswordResetUseCase>()(_emailController.text);
 
-    setState(() => _isLoading = true);
+    if (!mounted) return;
 
-    // Simula envio de código (TODO: integrar com API)
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() => _isLoading = false);
-
-    if (mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => VerifyCodePage(email: _emailController.text),
-        ),
-      );
-    }
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = failure.message;
+        });
+      },
+      (_) {
+        setState(() {
+          _isLoading = false;
+          _emailSent = true;
+        });
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         body: SafeArea(
@@ -86,36 +84,35 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
             opacity: _fadeAnimation,
             child: Stack(
               children: [
-                // Decorative gradient circle in top right
                 Positioned(
-                  top: -100,
-                  right: -100,
+                  top: -60,
+                  left: -40,
+                  right: -40,
                   child: Container(
-                    width: 300,
-                    height: 300,
+                    height: 340,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(220),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                         colors: [
-                          AppTheme.gradientLight.withValues(alpha: 0.4),
-                          AppTheme.gradientLight.withValues(alpha: 0.2),
+                          AppTheme.gradientLight.withValues(alpha: 0.65),
+                          AppTheme.gradientLight.withValues(alpha: 0.32),
                           AppTheme.gradientLight.withValues(alpha: 0.0),
                         ],
-                        stops: const [0.0, 0.5, 1.0],
+                        stops: const [0.0, 0.55, 1.0],
                       ),
                     ),
                   ),
                 ),
-
-                // Main content
                 Column(
                   children: [
-                    // Top bar with back button
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
                       child: Row(
                         children: [
-                          // Back button
                           GestureDetector(
                             onTap: () {
                               if (Navigator.canPop(context)) {
@@ -140,67 +137,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                         ],
                       ),
                     ),
-
-                    // Scrollable content
                     Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return SingleChildScrollView(
-                            padding: const EdgeInsets.all(24),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: constraints.maxHeight - 48,
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                            // Title
-                            Text(
-                              'Esqueceu a senha?',
-                              style: AppTheme.headingMedium.copyWith(
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.12,
-                              ),
-                            ),
-
-                            const SizedBox(height: 9),
-
-                            // Subtitle
-                            Text(
-                              'Não se preocupe! Insira o email cadastrado e enviaremos um código de verificação para você.',
-                              style: AppTheme.bodyMedium.copyWith(
-                                color: AppTheme.secondaryText,
-                                fontSize: 14,
-                                letterSpacing: 0.07,
-                                height: 1.5,
-                              ),
-                            ),
-
-                            const SizedBox(height: 32),
-
-                            // Email field
-                            CustomTextField(
-                              label: 'E-mail',
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              autofillHints: const [AutofillHints.email],
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            // Send Code button
-                            PrimaryButton(
-                              text: _isLoading ? 'Enviando...' : 'Enviar Código',
-                              onPressed: _isLoading ? null : _sendCode,
-                            ),
-
-                            const SizedBox(height: 24),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: _emailSent ? _buildSentState() : _buildForm(),
                       ),
                     ),
                   ],
@@ -210,6 +150,127 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Text(
+          'Esqueceu a senha?',
+          style: AppTheme.headingMedium.copyWith(
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.12,
+          ),
+        ),
+        const SizedBox(height: 9),
+        Text(
+          'Enviaremos um link de redefinição para o e-mail da conta. '
+          'Contas que entram só com Google não têm senha — use “Continuar com o Google”.',
+          style: AppTheme.bodyMedium.copyWith(
+            color: AppTheme.secondaryText,
+            fontSize: 14,
+            letterSpacing: 0.07,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 32),
+        CustomTextField(
+          label: 'E-mail',
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
+        ),
+        if (_errorMessage != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.errorColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.errorColor.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Text(
+              _errorMessage!,
+              style: TextStyle(
+                color: AppTheme.errorColor,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        PrimaryButton(
+          text: _isLoading ? 'Enviando...' : 'Enviar link',
+          onPressed: _isLoading ? null : _sendResetEmail,
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildSentState() {
+    final email = _emailController.text.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Icon(Icons.mark_email_read_outlined,
+            size: 48, color: AppTheme.primaryColor),
+        const SizedBox(height: 16),
+        Text(
+          'Verifique seu e-mail',
+          style: AppTheme.headingMedium.copyWith(
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.12,
+          ),
+        ),
+        const SizedBox(height: 9),
+        Text(
+          'Se existir uma conta com $email, enviamos um link para redefinir a senha. '
+          'Abra o e-mail no celular e toque no link para voltar ao app.',
+          style: AppTheme.bodyMedium.copyWith(
+            color: AppTheme.secondaryText,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Não recebeu? Confira spam e se o e-mail é o mesmo do cadastro. '
+          'Quem só usa Google deve entrar com Google.',
+          style: AppTheme.bodyMedium.copyWith(
+            color: AppTheme.secondaryText,
+            fontSize: 13,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 24),
+        PrimaryButton(
+          text: 'Voltar ao login',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: TextButton(
+            onPressed: _isLoading
+                ? null
+                : () {
+                    setState(() => _emailSent = false);
+                  },
+            child: Text(
+              'Usar outro e-mail',
+              style: TextStyle(color: AppTheme.primaryColor),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

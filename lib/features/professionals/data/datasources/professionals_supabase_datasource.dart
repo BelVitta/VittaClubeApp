@@ -11,8 +11,8 @@ class ProfessionalsSupabaseDataSource {
   Future<List<ProfessionalModel>> getActiveProfessionals() async {
     final rows = await _supabase
         .from('professionals')
-        .select('id, name, available_days, avatar_url, avatar_bg_color,'
-            ' specialties(name)')
+        .select('id, name, available_days, availability_note, avatar_url,'
+            ' avatar_bg_color, specialties(name)')
         .eq('is_active', true)
         .order('name');
 

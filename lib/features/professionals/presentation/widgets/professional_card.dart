@@ -159,13 +159,13 @@ class ProfessionalCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.chat_outlined,
+              Icons.event_available_outlined,
               size: 14,
               color: const Color(0xFF34933E),
             ),
             const SizedBox(width: 4),
             Text(
-              'Agendar via Whatsapp',
+              'Agendar',
               style: GoogleFonts.outfit(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,

@@ -20,6 +20,9 @@ SUPABASE_PROD_REF=...
 SUPABASE_PROD_DB_PASSWORD=...
 SUPABASE_PROD_URL=https://...supabase.co
 SUPABASE_PROD_ANON_KEY=...
+
+# JSON da service account Firebase (push FCM). Não commitar o arquivo .json.
+FCM_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 ```
 
 `supabase.env` é local e não deve ser commitado.
@@ -49,14 +52,49 @@ Os scripts executam:
 ```bash
 supabase link --project-ref <REF>
 supabase migration list
-supabase db push
+supabase db push --include-all --yes
 supabase functions deploy health-check
 supabase functions deploy create-woovi-subscription
 supabase functions deploy woovi-webhook
 supabase functions deploy reconcile-woovi-subscription
 supabase functions deploy cancel-woovi-subscription
+supabase functions deploy send-push-campaign
 supabase migration list
 ```
+
+### Se o push falhar com "Remote migration versions not found"
+
+Isso significa que o **remoto tem uma versão que o local não reconhece**
+(geralmente placeholder com versão curta tipo `20260601`).
+
+1. Ver o desalinhamento:
+   ```bash
+   supabase link --project-ref "$SUPABASE_DEV_REF"
+   supabase migration list
+   ```
+2. Remover do histórico remoto a versão órfã (só se for placeholder / no-op):
+   ```bash
+   supabase migration repair --status reverted <VERSION>
+   ```
+3. Rodar o push de novo:
+   ```bash
+   ./scripts/supabase_push_dev.sh
+   ```
+
+**Regra:** nomes de migration devem usar timestamp de 14 dígitos
+(`YYYYMMDDHHmmss_nome.sql`). Evite versões curtas (`20260601_...`).
+
+## Criptografia CPF/telefone
+
+`encrypt_sensitive` / `decrypt_sensitive` usam o **Supabase Vault**
+(secret `vita_clube_encryption_key`), não `app.encryption_key`.
+
+Motivo: em projetos hospedados, `ALTER DATABASE ... SET app.encryption_key`
+retorna `permission denied` — a chave nunca ficava disponível e o cadastro
+com CPF/telefone falhava.
+
+A migration `20260711000400_encryption_key_via_vault.sql` cria o secret
+automaticamente se não existir. Cada ambiente (dev/prod) tem a própria chave.
 
 ## Rodar app apontando para dev/prod
 

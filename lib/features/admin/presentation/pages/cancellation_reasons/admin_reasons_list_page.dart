@@ -50,7 +50,7 @@ class _ReasonsListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Motivo de cancelamento excluido com sucesso!',
+                'Motivo de cancelamento excluído com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -60,7 +60,7 @@ class _ReasonsListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                state.errorMessage ?? 'Erro ao processar operacao.',
+                state.errorMessage ?? 'Erro ao processar operação.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.errorColor,
@@ -99,7 +99,7 @@ class _ReasonsListView extends StatelessWidget {
                       icon: Icons.cancel_outlined,
                       message: 'Nenhum motivo de cancelamento encontrado',
                       subtitle:
-                          'Os motivos sao gerados automaticamente pelo fluxo de cancelamento.',
+                          'Os motivos são gerados automaticamente pelo fluxo de cancelamento.',
                     );
                   }
 

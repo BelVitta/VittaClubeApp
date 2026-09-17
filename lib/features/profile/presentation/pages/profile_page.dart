@@ -14,12 +14,13 @@ import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../widgets/profile_menu_item.dart';
 import '../widgets/profile_user_card.dart';
+import '../../../notifications/presentation/widgets/notification_bell_button.dart';
 import 'notification_settings_page.dart';
 import 'personal_data_page.dart';
-import '../../../notifications/presentation/pages/notifications_page.dart';
 import 'privacy_data_page.dart';
 import 'security_page.dart';
 import '../../../admin/presentation/pages/admin_dashboard_page.dart';
+import '../../../dependents/presentation/pages/dependents_page.dart';
 import '../../../parceiro/presentation/pages/user/seja_parceiro_page.dart';
 
 /// Página principal do Perfil / Configurações
@@ -165,27 +166,7 @@ class ProfilePage extends StatelessWidget {
             letterSpacing: 0.12,
           ),
         ),
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const NotificationsPage()),
-            );
-          },
-          child: Container(
-            width: 39,
-            height: 39,
-            decoration: BoxDecoration(
-              color: const Color(0xFF01225B).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(19.5),
-            ),
-            child: const Icon(
-              Icons.notifications_outlined,
-              size: 19,
-              color: Color(0xFF01225B),
-            ),
-          ),
-        ),
+        const NotificationBellButton(),
       ],
     );
   }
@@ -217,6 +198,22 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
+        BlocBuilder<ProfileBloc, ProfileState>(
+          builder: (context, state) {
+            if (state is! ProfileLoaded) return const SizedBox.shrink();
+            return ProfileMenuItem(
+              title: 'Dependentes',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      DependentsPage(holderUserId: state.profile.id),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
         ProfileMenuItem(
           title: 'Segurança',
           onTap: () => Navigator.push(
@@ -234,19 +231,31 @@ class ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         ProfileMenuItem(
-          title: 'Seja Parceiro',
+          title: 'Seja parceiro',
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const SejaParcerioPage()),
+            MaterialPageRoute(builder: (_) => const SejaParceiroPage()),
           ),
         ),
-        const SizedBox(height: 8),
-        ProfileMenuItem(
-          title: 'Administração',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
-          ),
+        BlocBuilder<ProfileBloc, ProfileState>(
+          builder: (context, state) {
+            final hasAdminAccess =
+                state is ProfileLoaded && state.profile.hasAdminAccess;
+            if (!hasAdminAccess) return const SizedBox.shrink();
+            return Column(
+              children: [
+                const SizedBox(height: 8),
+                ProfileMenuItem(
+                  title: 'Administração',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminDashboardPage()),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 16),
 

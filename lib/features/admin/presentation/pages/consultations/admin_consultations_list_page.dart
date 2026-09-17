@@ -12,6 +12,7 @@ import '../../widgets/admin_search_bar.dart';
 import '../../widgets/admin_list_item.dart';
 import '../../widgets/admin_empty_state.dart';
 import '../../widgets/admin_delete_dialog.dart';
+import '../../widgets/admin_filter_chip.dart';
 import 'admin_consultation_form_page.dart';
 
 /// Página de listagem de consultas no módulo admin.
@@ -143,8 +144,7 @@ class _ConsultationsListView extends StatelessWidget {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: visible.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 8),
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final consultation = visible[index];
                           return AdminListItem(
@@ -173,15 +173,13 @@ class _ConsultationsListView extends StatelessWidget {
                               });
                             },
                             onDelete: () async {
-                              final confirmed =
-                                  await AdminDeleteDialog.show(
+                              final confirmed = await AdminDeleteDialog.show(
                                 context,
                                 consultation.title,
                               );
                               if (confirmed == true && context.mounted) {
-                                context
-                                    .read<ConsultationAdminBloc>()
-                                    .add(DeleteConsultationRequested(
+                                context.read<ConsultationAdminBloc>().add(
+                                    DeleteConsultationRequested(
                                         consultation.id));
                               }
                             },
@@ -196,8 +194,7 @@ class _ConsultationsListView extends StatelessWidget {
                               .add(LoadMoreConsultations()),
                           child: Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF5F6FA),
                               borderRadius: BorderRadius.circular(12),
@@ -239,9 +236,7 @@ class _ConsultationsListView extends StatelessWidget {
               ),
             ).then((result) {
               if (result == true && context.mounted) {
-                context
-                    .read<ConsultationAdminBloc>()
-                    .add(LoadConsultations());
+                context.read<ConsultationAdminBloc>().add(LoadConsultations());
               }
             });
           },
@@ -276,8 +271,7 @@ class _FiltersSection extends StatelessWidget {
           // Filtro por período
           _FilterChip(
             icon: Icons.calendar_today_outlined,
-            label: state.filterDateStart != null ||
-                    state.filterDateEnd != null
+            label: state.filterDateStart != null || state.filterDateEnd != null
                 ? _formatDateRange(
                     state.filterDateStart, state.filterDateEnd, dateFormat)
                 : 'Período',
@@ -325,78 +319,13 @@ class _FiltersSection extends StatelessWidget {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (bottomContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Text(
-                  'Filtrar por Profissional',
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-              ),
-              if (state.filterProfessional != null)
-                ListTile(
-                  leading:
-                      const Icon(Icons.clear, color: Colors.red, size: 20),
-                  title: Text(
-                    'Remover filtro',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      color: Colors.red,
-                    ),
-                  ),
-                  onTap: () {
-                    context
-                        .read<ConsultationAdminBloc>()
-                        .add(const FilterByProfessional(null));
-                    Navigator.pop(bottomContext);
-                  },
-                ),
-              ...professionals.map((name) => ListTile(
-                    leading: Icon(
-                      state.filterProfessional == name
-                          ? Icons.check_circle
-                          : Icons.person_outline,
-                      color: state.filterProfessional == name
-                          ? AppTheme.primaryColor
-                          : const Color(0xFF6D7F95),
-                      size: 20,
-                    ),
-                    title: Text(
-                      name,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: state.filterProfessional == name
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    onTap: () {
-                      context
-                          .read<ConsultationAdminBloc>()
-                          .add(FilterByProfessional(name));
-                      Navigator.pop(bottomContext);
-                    },
-                  )),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
+    AdminFilterChip.showFilterBottomSheet(
+      context,
+      title: 'Filtrar por Profissional',
+      options: professionals,
+      current: state.filterProfessional,
+      onSelected: (value) {
+        context.read<ConsultationAdminBloc>().add(FilterByProfessional(value));
       },
     );
   }
@@ -407,14 +336,14 @@ class _FiltersSection extends StatelessWidget {
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      initialDateRange: state.filterDateStart != null &&
-              state.filterDateEnd != null
-          ? DateTimeRange(
-              start: state.filterDateStart!, end: state.filterDateEnd!)
-          : DateTimeRange(
-              start: now.subtract(const Duration(days: 30)),
-              end: now,
-            ),
+      initialDateRange:
+          state.filterDateStart != null && state.filterDateEnd != null
+              ? DateTimeRange(
+                  start: state.filterDateStart!, end: state.filterDateEnd!)
+              : DateTimeRange(
+                  start: now.subtract(const Duration(days: 30)),
+                  end: now,
+                ),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -471,8 +400,7 @@ class _FilterChip extends StatelessWidget {
             Icon(
               icon,
               size: 14,
-              color:
-                  isActive ? AppTheme.primaryColor : const Color(0xFF6D7F95),
+              color: isActive ? AppTheme.primaryColor : const Color(0xFF6D7F95),
             ),
             const SizedBox(width: 6),
             Text(

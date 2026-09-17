@@ -14,9 +14,16 @@ class QrValidationResultModel extends QrValidationResult {
     super.usageRecordId,
     super.remainingUses,
     super.memberName,
+    super.holderName,
+    super.beneficiaryType,
     super.planLevel,
     super.discountPercentage,
     super.subscriptionId,
+    super.holderUserId,
+    super.dependentId,
+    super.cpfMasked,
+    super.discountSource,
+    super.partnerId,
     this.actorUserId,
     this.establishmentId,
     this.reason,
@@ -26,14 +33,21 @@ class QrValidationResultModel extends QrValidationResult {
   factory QrValidationResultModel.fromJson(Map<String, dynamic> json) {
     return QrValidationResultModel(
       decision: _decisionFromDb(json['decision'] as String?),
-      message: json['message'] as String? ?? 'Validacao processada.',
+      message: json['message'] as String? ?? 'Validação processada.',
       appointmentId: json['appointment_id'] as String?,
       usageRecordId: json['usage_record_id'] as String?,
       remainingUses: json['remaining_uses'] as int?,
       memberName: json['member_name'] as String?,
+      holderName: json['holder_name'] as String?,
+      beneficiaryType: json['beneficiary_type'] as String?,
       planLevel: json['plan_level'] as String?,
       discountPercentage: _doubleFromJson(json['discount_percentage']),
       subscriptionId: json['subscription_id'] as String?,
+      holderUserId: json['holder_user_id'] as String?,
+      dependentId: json['dependent_id'] as String?,
+      cpfMasked: json['cpf_masked'] as String?,
+      discountSource: json['discount_source'] as String?,
+      partnerId: json['partner_id'] as String?,
       actorUserId: json['actor_user_id'] as String?,
       establishmentId: json['establishment_id'] as String?,
       reason: json['reason'] as String?,
@@ -48,6 +62,8 @@ class QrValidationResultModel extends QrValidationResult {
       'usage_record_id': usageRecordId,
       'remaining_uses': remainingUses,
       'member_name': memberName,
+      'holder_name': holderName,
+      'beneficiary_type': beneficiaryType,
       'plan_level': planLevel,
       'discount_percentage': discountPercentage,
       'subscription_id': subscriptionId,
@@ -74,6 +90,8 @@ class QrValidationResultModel extends QrValidationResult {
         return QrValidationDecision.invalidToken;
       case 'expired_appointment':
         return QrValidationDecision.expiredAppointment;
+      case 'rate_limited':
+        return QrValidationDecision.rateLimited;
       default:
         return QrValidationDecision.refused;
     }

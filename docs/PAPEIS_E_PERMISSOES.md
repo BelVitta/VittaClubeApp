@@ -243,7 +243,8 @@ Quem e: o **dono da clinica** ou gestor financeiro. Supervisiona tudo.
 | Ver parceiros/descontos | ✅ | — | — |
 | CRUD parceiros | — | — | ✅ |
 | **Motivos cancelamento** | | | |
-| CRUD motivos | — | ✅ | ✅ |
+| Ver motivos (ao cancelar) | — | ✅ | ✅ |
+| CRUD motivos | — | — | ✅ |
 
 ---
 

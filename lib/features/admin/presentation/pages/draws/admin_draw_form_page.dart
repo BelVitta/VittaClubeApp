@@ -187,14 +187,14 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle('Informacoes do Sorteio'),
+                    _buildSectionTitle('Informações do sorteio'),
                     const SizedBox(height: 12),
                     AdminFormField(
                       label: 'Nome do Sorteio',
                       controller: _nameController,
                       enabled: !_isCompleted,
                       validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Nome obrigatorio' : null,
+                          (v == null || v.trim().isEmpty) ? 'Nome obrigatório' : null,
                     ),
                     const SizedBox(height: 16),
                     _buildDateField(
@@ -221,18 +221,18 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle('Premio'),
+                    _buildSectionTitle('Prêmio'),
                     const SizedBox(height: 12),
                     AdminFormField(
-                      label: 'Nome do Premio',
+                      label: 'Nome do prêmio',
                       controller: _prizeNameController,
                       enabled: !_isCompleted,
                       validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Premio obrigatorio' : null,
+                          (v == null || v.trim().isEmpty) ? 'Prêmio obrigatório' : null,
                     ),
                     const SizedBox(height: 16),
                     AdminFormField(
-                      label: 'Descricao do Premio',
+                      label: 'Descrição do prêmio',
                       controller: _prizeDescriptionController,
                       enabled: !_isCompleted,
                       maxLines: 3,
@@ -250,10 +250,10 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle('Periodo de Inscricao'),
+                    _buildSectionTitle('Período de inscrição'),
                     const SizedBox(height: 12),
                     _buildDateField(
-                      label: 'Inicio das Inscricoes',
+                      label: 'Início das inscrições',
                       controller: _registrationStartController,
                       enabled: !_isCompleted,
                       onTap: () async {
@@ -268,7 +268,7 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
                     ),
                     const SizedBox(height: 16),
                     _buildDateField(
-                      label: 'Fim das Inscricoes',
+                      label: 'Fim das inscrições',
                       controller: _registrationEndController,
                       enabled: !_isCompleted,
                       onTap: () async {
@@ -405,7 +405,7 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Foto do Premio',
+          'Foto do prêmio',
           style: GoogleFonts.outfit(
             fontSize: 13,
             fontWeight: FontWeight.w500,
@@ -419,7 +419,7 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
               : () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Upload de imagem sera implementado com o backend'),
+                      content: Text('Upload de imagem será implementado com o backend'),
                     ),
                   );
                 },
@@ -478,7 +478,7 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Niveis de Plano Elegiveis',
+          'Níveis de plano elegíveis',
           style: GoogleFonts.outfit(
             fontSize: 13,
             fontWeight: FontWeight.w500,
@@ -529,8 +529,8 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
         const SizedBox(height: 4),
         Text(
           _selectedPlanLevels.isEmpty
-              ? 'Nenhum selecionado = todos elegiveis'
-              : '${_selectedPlanLevels.length} nivel(is) selecionado(s)',
+              ? 'Nenhum selecionado = todos elegíveis'
+              : '${_selectedPlanLevels.length} nível(is) selecionado(s)',
           style: GoogleFonts.outfit(
             fontSize: 11,
             color: const Color(0xFF6D7F95),
@@ -607,16 +607,16 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
             children: [
               const Icon(Icons.verified_outlined, size: 18, color: AppTheme.primaryColor),
               const SizedBox(width: 8),
-              _buildSectionTitle('Auditoria e Transparencia'),
+              _buildSectionTitle('Auditoria e transparência'),
             ],
           ),
           const SizedBox(height: 12),
-          _buildAuditRow('Indice sorteado', '${entity.winnerIndex}'),
-          _buildAuditRow('Total participantes', '${entity.participantCount}'),
+          _buildAuditRow('Índice sorteado', '${entity.winnerIndex}'),
+          _buildAuditRow('Total de participantes', '${entity.participantCount}'),
           const Divider(height: 20),
           _buildAuditRow('Seed Hash (SHA-256)', entity.drawSeedHash ?? '', mono: true),
           const SizedBox(height: 8),
-          _buildAuditRow('Hash dos Participantes', entity.participantListHash ?? '', mono: true),
+          _buildAuditRow('Hash dos participantes', entity.participantListHash ?? '', mono: true),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -631,7 +631,7 @@ class _AdminDrawFormPageState extends State<AdminDrawFormPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'O sorteio utilizou um algoritmo baseado em SHA-256 com seed composta pelo ID do sorteio, hash da lista de participantes e timestamp da execucao. O resultado e deterministico e verificavel.',
+                    'O sorteio utilizou um algoritmo baseado em SHA-256 com seed composta pelo ID do sorteio, hash da lista de participantes e timestamp da execução. O resultado é determinístico e verificável.',
                     style: GoogleFonts.outfit(
                       fontSize: 11,
                       color: AppTheme.primaryColor,

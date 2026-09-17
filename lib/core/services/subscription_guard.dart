@@ -71,7 +71,7 @@ class SubscriptionGuard {
       return 'Regularize seu pagamento para acessar $feature.';
     }
     if (isInGracePeriod) {
-      return 'Aguarde o periodo de carencia de 7 dias para acessar $feature.';
+      return 'Aguarde o período de carência de 7 dias para acessar $feature.';
     }
     return '';
   }

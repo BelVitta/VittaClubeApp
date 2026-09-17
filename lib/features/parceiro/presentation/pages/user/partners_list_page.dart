@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../../core/di/injection_container.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../admin/presentation/widgets/admin_page_scaffold.dart';
 import '../../../domain/entities/partner_entity.dart';
+import '../../../domain/usecases/partner/get_partners_usecase.dart';
 import 'partner_detail_page.dart';
 import 'seja_parceiro_page.dart';
 
@@ -15,63 +17,40 @@ class PartnersListPage extends StatefulWidget {
 
 class _PartnersListPageState extends State<PartnersListPage> {
   String _searchQuery = '';
+  late Future<List<PartnerEntity>> _partnersFuture;
 
-  // Mock data - will be replaced by BLoC
-  final List<PartnerEntity> _partners = const [
-    PartnerEntity(
-      id: 'partner-001',
-      profileId: 'mock-parceiro-001',
-      name: 'Lab Vita Saude',
-      category: 'laboratorio',
-      code: 'LABSAUDE',
-      address: 'Av. Santos Dumont, 1500 - Fortaleza/CE',
-      phone: '85999001122',
-      logoUrl: '',
-      isActive: true,
-    ),
-    PartnerEntity(
-      id: 'partner-002',
-      profileId: 'mock-parceiro-002',
-      name: 'Clinica Bem Estar',
-      category: 'clinica',
-      code: 'BEMESTAR',
-      address: 'Rua Barao de Studart, 800 - Fortaleza/CE',
-      phone: '85999334455',
-      logoUrl: '',
-      isActive: true,
-    ),
-    PartnerEntity(
-      id: 'partner-003',
-      profileId: 'mock-parceiro-003',
-      name: 'Otica VitaVision',
-      category: 'otica',
-      code: 'VITAVISION',
-      address: 'Shopping Iguatemi, Loja 42 - Fortaleza/CE',
-      phone: '85999667788',
-      logoUrl: '',
-      isActive: true,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _partnersFuture = _loadPartners();
+  }
 
-  List<PartnerEntity> get _filteredPartners {
-    if (_searchQuery.isEmpty) return _partners;
-    return _partners
+  Future<List<PartnerEntity>> _loadPartners() async {
+    final result = await sl<GetPartnersUseCase>()();
+    return result.fold(
+        (failure) => throw Exception(failure.message), (partners) => partners);
+  }
+
+  List<PartnerEntity> _filter(List<PartnerEntity> partners) {
+    if (_searchQuery.isEmpty) return partners;
+    final query = _searchQuery.toLowerCase();
+    return partners
         .where((p) =>
-            p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            p.category.toLowerCase().contains(_searchQuery.toLowerCase()))
+            p.name.toLowerCase().contains(query) ||
+            p.category.toLowerCase().contains(query))
         .toList();
   }
 
   String _categoryLabel(String category) {
     switch (category) {
       case 'laboratorio':
-        return 'Laboratorio';
+        return 'Laboratório';
       case 'clinica':
-        return 'Clinica';
+        return 'Clínica';
       case 'farmacia':
-        return 'Farmacia';
+        return 'Farmácia';
       case 'otica':
-        return 'Otica';
+        return 'Ótica';
       default:
         return 'Outro';
     }
@@ -96,7 +75,7 @@ class _PartnersListPageState extends State<PartnersListPage> {
   Widget build(BuildContext context) {
     return AdminPageScaffold(
       title: 'Parceiros',
-      subtitle: 'Laboratorios, clinicas e mais',
+      subtitle: 'Laboratórios, clínicas e mais',
       body: Column(
         children: [
           // Search bar
@@ -133,7 +112,7 @@ class _PartnersListPageState extends State<PartnersListPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const SejaParcerioPage(),
+                  builder: (_) => const SejaParceiroPage(),
                 ),
               );
             },
@@ -190,105 +169,130 @@ class _PartnersListPageState extends State<PartnersListPage> {
           ),
           const SizedBox(height: 16),
           // Partners list
-          if (_filteredPartners.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 48),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.storefront_outlined,
-                    size: 48,
-                    color: const Color(0xFF9EAAB8).withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Nenhum parceiro encontrado',
+          FutureBuilder<List<PartnerEntity>>(
+            future: _partnersFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.only(top: 48),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 48),
+                  child: Text(
+                    'Não foi possível carregar os parceiros.',
                     style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
                       color: const Color(0xFF6D7F95),
                     ),
                   ),
-                ],
-              ),
-            )
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _filteredPartners.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final partner = _filteredPartners[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PartnerDetailPage(partner: partner),
+                );
+              }
+              final filtered = _filter(snapshot.data ?? const []);
+              if (filtered.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 48),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.storefront_outlined,
+                        size: 48,
+                        color: const Color(0xFF9EAAB8).withValues(alpha: 0.5),
                       ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFEBEEF2)),
-                    ),
-                    child: Row(
-                      children: [
-                        // Icon/Logo
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                          ),
-                          child: Icon(
-                            _categoryIcon(partner.category),
-                            size: 24,
-                            color: AppTheme.primaryColor,
-                          ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Nenhum parceiro encontrado',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF6D7F95),
                         ),
-                        const SizedBox(width: 12),
-                        // Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                partner.name,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _categoryLabel(partner.category),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                  color: const Color(0xFF6D7F95),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 14,
-                          color: AppTheme.primaryColor.withValues(alpha: 0.5),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
-              },
-            ),
+              }
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final partner = filtered[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PartnerDetailPage(partner: partner),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFEBEEF2)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color:
+                                  AppTheme.primaryColor.withValues(alpha: 0.1),
+                            ),
+                            child: Icon(
+                              _categoryIcon(partner.category),
+                              size: 24,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  partner.name,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  partner.discountPercentage > 0
+                                      ? '${_categoryLabel(partner.category)} · ${partner.discountPercentage.toStringAsFixed(0)}% de desconto'
+                                      : _categoryLabel(partner.category),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFF6D7F95),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 14,
+                            color: AppTheme.primaryColor.withValues(alpha: 0.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ],
       ),
     );

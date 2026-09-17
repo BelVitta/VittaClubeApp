@@ -22,6 +22,18 @@ abstract class DependentsDataSource {
   Future<int> countActiveDependents({required String holderUserId});
 
   Future<bool> activeCpfExists(String cpf);
+
+  /// Admin-only (RLS): todos os dependentes `pending` de todos os titulares,
+  /// com nome/e-mail do titular anexados (`holder_name`/`holder_email`).
+  Future<List<Map<String, dynamic>>> getPendingDependents();
+
+  /// Admin-only (RLS + trigger): aprova (`active`) ou rejeita (`inactive`)
+  /// um cadastro pendente.
+  Future<void> updateDependentStatus({
+    required String dependentId,
+    required String status,
+    String? rejectionReason,
+  });
 }
 
 abstract class DependentAppointmentDataSource {
@@ -56,8 +68,9 @@ abstract class QrValidationDataSource {
 }
 
 abstract class MemberQrValidationDataSource {
+  /// [identifier] pode ser UUID do membro ou código curto de 8 dígitos.
   Future<Map<String, dynamic>> validateMemberQr({
-    required String userId,
+    required String identifier,
     required String actorUserId,
   });
 }

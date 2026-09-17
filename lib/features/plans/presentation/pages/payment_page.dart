@@ -10,13 +10,14 @@ import '../../../../core/payment/infinitypay/infinitypay_checkout_service.dart';
 import '../../../../core/payment/infinitypay/infinitypay_models.dart';
 import '../../../../core/payment/payment_gateway.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/input_formatters.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../../shared/widgets/legal_document_page.dart';
 import '../../../subscription/domain/usecases/activate_subscription_usecase.dart';
 import '../../data/datasources/plans_supabase_datasource.dart';
 import 'infinitypay_pending_page.dart';
 import '../widgets/payment_method_item.dart';
 import '../widgets/payment_summary_sheet.dart';
-import '../widgets/terms_bottom_sheet.dart';
 
 /// `creditCard` é processado via checkout redirecionado da InfinitePay —
 /// não existe formulário próprio de cartão no app.
@@ -319,12 +320,7 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   void _showTerms() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => const TermsBottomSheet(),
-    );
+    LegalDocumentPage.openTerms(context);
   }
 
   @override
@@ -623,7 +619,7 @@ class _PaymentPageState extends State<PaymentPage> {
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(11),
-            _CpfFormatter(),
+            CpfInputFormatter(),
           ],
         ),
       ],
@@ -756,30 +752,6 @@ class _PaymentPageState extends State<PaymentPage> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Formatter para CPF (000.000.000-00)
-class _CpfFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text.replaceAll(RegExp(r'[.\-]'), '');
-    final buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      if (i == 2 || i == 5) {
-        if (i + 1 != text.length) buffer.write('.');
-      } else if (i == 8) {
-        if (i + 1 != text.length) buffer.write('-');
-      }
-    }
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 }

@@ -44,7 +44,7 @@ class ReferralCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Compartilhe seu codigo e ganhe recompensas!',
+            'Compartilhe seu código e ganhe recompensas!',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.8),
@@ -78,7 +78,7 @@ class ReferralCodeCard extends StatelessWidget {
                       Clipboard.setData(ClipboardData(text: referralCode));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Codigo copiado!'),
+                          content: Text('Código copiado!'),
                           duration: Duration(seconds: 2),
                         ),
                       );
@@ -126,7 +126,7 @@ class ReferralCodeCard extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  'Gerar Codigo de Indicacao',
+                  'Gerar código de indicação',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -137,7 +137,7 @@ class ReferralCodeCard extends StatelessWidget {
           ],
           const SizedBox(height: 12),
           Text(
-            '$referralsThisMonth/10 indicacoes este mes',
+            '$referralsThisMonth/10 indicações este mês',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               color: Colors.white.withValues(alpha: 0.7),

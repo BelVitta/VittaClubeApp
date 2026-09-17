@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/rate_limit.dart';
 import '../../domain/entities/dependent_enums.dart';
 import 'dependents_datasource.dart';
 
@@ -81,11 +82,13 @@ class DependentsSupabaseDataSource
   @override
   Future<int> countActiveDependents({required String holderUserId}) async {
     try {
+      // Conta pending+active — um cadastro pendente já ocupa vaga no limite,
+      // pra não deixar fila de cadastros duplicados aguardando aprovação.
       final rows = await _client
           .from('dependents')
           .select('id')
           .eq('holder_user_id', holderUserId)
-          .eq('status', 'active');
+          .inFilter('status', ['active', 'pending']);
       return rows.length;
     } catch (e) {
       throw ServerException(message: 'Erro ao contar dependentes: $e');
@@ -99,11 +102,60 @@ class DependentsSupabaseDataSource
           .from('dependents')
           .select('id')
           .eq('cpf', cpf)
-          .eq('status', 'active')
-          .limit(1);
+          .inFilter('status', ['active', 'pending']).limit(1);
       return rows.isNotEmpty;
     } catch (e) {
       throw ServerException(message: 'Erro ao validar CPF do dependente: $e');
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getPendingDependents() async {
+    try {
+      final rows = await _client
+          .from('dependents')
+          .select()
+          .eq('status', 'pending')
+          .order('created_at');
+      final list = rows.map((r) => Map<String, dynamic>.from(r)).toList();
+      if (list.isEmpty) return list;
+
+      final holderIds =
+          list.map((r) => r['holder_user_id'] as String).toSet().toList();
+      final holders = await _client
+          .from('profiles')
+          .select('id, name, email')
+          .inFilter('id', holderIds);
+      final holderMap = {
+        for (final h in holders) h['id'] as String: h,
+      };
+      for (final row in list) {
+        final holder = holderMap[row['holder_user_id']];
+        row['holder_name'] = holder?['name'];
+        row['holder_email'] = holder?['email'];
+      }
+      return list;
+    } catch (e) {
+      throw ServerException(
+          message: 'Erro ao listar dependentes pendentes: $e');
+    }
+  }
+
+  @override
+  Future<void> updateDependentStatus({
+    required String dependentId,
+    required String status,
+    String? rejectionReason,
+  }) async {
+    try {
+      await _client.from('dependents').update({
+        'status': status,
+        'rejection_reason': rejectionReason,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', dependentId);
+    } catch (e) {
+      throw ServerException(
+          message: 'Erro ao atualizar status do dependente: $e');
     }
   }
 
@@ -193,23 +245,29 @@ class DependentsSupabaseDataSource
       });
       return Map<String, dynamic>.from(result as Map);
     } catch (e) {
-      throw ServerException(message: 'Erro ao validar QR: $e');
+      throw ServerException(
+        message: RateLimitMessages.messageOrNull(e) ?? 'Erro ao validar QR: $e',
+      );
     }
   }
 
   @override
   Future<Map<String, dynamic>> validateMemberQr({
-    required String userId,
+    required String identifier,
     required String actorUserId,
   }) async {
     try {
-      final result = await _client.rpc('validate_member_qr', params: {
-        'p_user_id': userId,
+      final raw = identifier.trim();
+      final result = await _client.rpc('validate_loyalty_card', params: {
+        'p_payload': raw,
         'p_actor_user_id': actorUserId,
       });
       return Map<String, dynamic>.from(result as Map);
     } catch (e) {
-      throw ServerException(message: 'Erro ao validar QR do membro: $e');
+      throw ServerException(
+        message: RateLimitMessages.messageOrNull(e) ??
+            'Erro ao validar QR do membro: $e',
+      );
     }
   }
 }

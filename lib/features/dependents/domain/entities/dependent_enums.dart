@@ -1,12 +1,32 @@
 enum DependentStatus {
+  /// Recém-cadastrado, aguardando aprovação presencial de um admin.
+  /// Não pode ser selecionado em agendamentos nem validado por QR.
+  pending,
   active,
   inactive;
 
   static DependentStatus fromDb(String value) {
-    return value == 'inactive' ? inactive : active;
+    switch (value) {
+      case 'active':
+        return active;
+      case 'pending':
+        return pending;
+      case 'inactive':
+      default:
+        return inactive;
+    }
   }
 
-  String get dbValue => this == active ? 'active' : 'inactive';
+  String get dbValue {
+    switch (this) {
+      case active:
+        return 'active';
+      case pending:
+        return 'pending';
+      case inactive:
+        return 'inactive';
+    }
+  }
 }
 
 enum BeneficiaryType {
@@ -63,4 +83,5 @@ enum QrValidationDecision {
   inactiveDependent,
   invalidToken,
   expiredAppointment,
+  rateLimited,
 }

@@ -1,14 +1,17 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/rate_limit.dart';
 import '../../domain/entities/badge_entity.dart';
 import '../../domain/entities/cancellation_reason_entity.dart';
 import '../../domain/entities/consultation_admin_entity.dart';
 import '../../domain/entities/coupon_entity.dart';
 import '../../domain/entities/draw_entity.dart';
+import '../../domain/entities/notification_campaign_entity.dart';
 import '../../domain/entities/notification_template_entity.dart';
 import '../../domain/entities/payment_admin_entity.dart';
 import '../../domain/entities/plan_admin_entity.dart';
@@ -20,6 +23,7 @@ import '../models/cancellation_reason_model.dart';
 import '../models/consultation_admin_model.dart';
 import '../models/coupon_model.dart';
 import '../models/draw_model.dart';
+import '../models/notification_campaign_model.dart';
 import '../models/notification_template_model.dart';
 import '../models/payment_admin_model.dart';
 import '../models/plan_admin_model.dart';
@@ -130,7 +134,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('professionals')
-          .select('id, name, specialty_id, available_days, avatar_url, avatar_bg_color, is_active, specialties(name)')
+          .select(
+              'id, name, specialty_id, available_days, availability_note, avatar_url, avatar_bg_color, is_active, specialties(name)')
           .order('name');
       return (data as List).map((e) => _professionalFromRow(e)).toList();
     } catch (e) {
@@ -143,7 +148,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('professionals')
-          .select('id, name, specialty_id, available_days, avatar_url, avatar_bg_color, is_active, specialties(name)')
+          .select(
+              'id, name, specialty_id, available_days, availability_note, avatar_url, avatar_bg_color, is_active, specialties(name)')
           .eq('id', id)
           .single();
       return _professionalFromRow(data);
@@ -167,12 +173,14 @@ class AdminSupabaseDataSource implements AdminDataSource {
             'name': professional.name,
             'specialty_id': professional.specialtyId,
             'available_days': days,
+            'availability_note': professional.availabilityNote,
             'avatar_url': professional.avatarUrl,
             'avatar_bg_color': professional.avatarBgColor,
             'whatsapp_encrypted': utf8.encode(professional.whatsappNumber),
             'is_active': professional.isActive,
           })
-          .select('id, name, specialty_id, available_days, avatar_url, avatar_bg_color, is_active, specialties(name)')
+          .select(
+              'id, name, specialty_id, available_days, availability_note, avatar_url, avatar_bg_color, is_active, specialties(name)')
           .single();
       return _professionalFromRow(data);
     } catch (e) {
@@ -195,12 +203,14 @@ class AdminSupabaseDataSource implements AdminDataSource {
             'name': professional.name,
             'specialty_id': professional.specialtyId,
             'available_days': days,
+            'availability_note': professional.availabilityNote,
             'avatar_url': professional.avatarUrl,
             'avatar_bg_color': professional.avatarBgColor,
             'is_active': professional.isActive,
           })
           .eq('id', professional.id)
-          .select('id, name, specialty_id, available_days, avatar_url, avatar_bg_color, is_active, specialties(name)')
+          .select(
+              'id, name, specialty_id, available_days, availability_note, avatar_url, avatar_bg_color, is_active, specialties(name)')
           .single();
       return _professionalFromRow(data);
     } catch (e) {
@@ -230,6 +240,7 @@ class AdminSupabaseDataSource implements AdminDataSource {
       specialtyId: e['specialty_id'] as String,
       specialtyName: specialtyName,
       availableDays: days,
+      availabilityNote: e['availability_note'] as String?,
       avatarUrl: e['avatar_url'] as String? ?? '',
       avatarBgColor: e['avatar_bg_color'] as int? ?? 0,
       whatsappNumber: '',
@@ -246,7 +257,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('plans')
-          .select('id, name, subscription_type, price, discount_label, is_active, plan_benefits(title, sort_order)')
+          .select(
+              'id, name, subscription_type, price, discount_label, is_active, plan_benefits(title, sort_order)')
           .order('name');
       return (data as List).map((e) => _planFromRow(e)).toList();
     } catch (e) {
@@ -259,7 +271,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('plans')
-          .select('id, name, subscription_type, price, discount_label, is_active, plan_benefits(title, sort_order)')
+          .select(
+              'id, name, subscription_type, price, discount_label, is_active, plan_benefits(title, sort_order)')
           .eq('id', id)
           .single();
       return _planFromRow(data);
@@ -300,16 +313,13 @@ class AdminSupabaseDataSource implements AdminDataSource {
   @override
   Future<PlanAdminModel> updatePlan(PlanAdminEntity plan) async {
     try {
-      await _supabase
-          .from('plans')
-          .update({
-            'name': plan.name,
-            'subscription_type': plan.subscriptionType,
-            'price': plan.price,
-            'discount_label': plan.discountLabel,
-            'is_active': plan.isActive,
-          })
-          .eq('id', plan.id);
+      await _supabase.from('plans').update({
+        'name': plan.name,
+        'subscription_type': plan.subscriptionType,
+        'price': plan.price,
+        'discount_label': plan.discountLabel,
+        'is_active': plan.isActive,
+      }).eq('id', plan.id);
       await _supabase.from('plan_benefits').delete().eq('plan_id', plan.id);
       for (int i = 0; i < plan.benefits.length; i++) {
         await _supabase.from('plan_benefits').insert({
@@ -336,11 +346,9 @@ class AdminSupabaseDataSource implements AdminDataSource {
 
   PlanAdminModel _planFromRow(Map<String, dynamic> e) {
     final benefitsRaw = e['plan_benefits'] as List<dynamic>? ?? [];
-    benefitsRaw.sort((a, b) =>
-        ((a['sort_order'] as int?) ?? 0)
-            .compareTo((b['sort_order'] as int?) ?? 0));
-    final benefits =
-        benefitsRaw.map((b) => b['title'] as String).toList();
+    benefitsRaw.sort((a, b) => ((a['sort_order'] as int?) ?? 0)
+        .compareTo((b['sort_order'] as int?) ?? 0));
+    final benefits = benefitsRaw.map((b) => b['title'] as String).toList();
     return PlanAdminModel(
       id: e['id'] as String,
       name: e['name'] as String,
@@ -361,7 +369,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('profiles')
-          .select('id, name, email, role, status, member_since, subscriptions(plan_id, badge_level, plan_level_status, activation_date, is_current, plans(name))')
+          .select(
+              'id, name, email, role, status, member_since, receptionist_code, subscriptions(plan_id, badge_level, plan_level_status, activation_date, is_current, plans(name))')
           .order('name');
       return (data as List).map((e) => _userFromRow(e)).toList();
     } catch (e) {
@@ -374,10 +383,21 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('profiles')
-          .select('id, name, email, role, status, member_since, subscriptions(plan_id, badge_level, plan_level_status, activation_date, is_current, plans(name))')
+          .select(
+              'id, name, email, role, status, member_since, receptionist_code, subscriptions(plan_id, badge_level, plan_level_status, activation_date, is_current, plans(name))')
           .eq('id', id)
           .single();
-      return _userFromRow(data);
+      final sensitive = await _supabase
+          .rpc('get_user_sensitive_profile', params: {'p_user_id': id});
+      final sensitiveRows = sensitive as List<dynamic>;
+      final sensitiveRow = sensitiveRows.isEmpty
+          ? const <String, dynamic>{}
+          : Map<String, dynamic>.from(sensitiveRows.first as Map);
+      return _userFromRow(
+        data,
+        cpf: sensitiveRow['cpf'] as String? ?? '',
+        phone: sensitiveRow['phone'] as String? ?? '',
+      );
     } catch (e) {
       throw ServerException(message: 'Usuário não encontrado: $e');
     }
@@ -392,10 +412,16 @@ class AdminSupabaseDataSource implements AdminDataSource {
   @override
   Future<UserAdminModel> updateUser(UserAdminEntity user) async {
     try {
-      await _supabase
-          .from('profiles')
-          .update({'name': user.name, 'status': user.status, 'role': user.role})
-          .eq('id', user.id);
+      await _supabase.from('profiles').update({
+        'name': user.name,
+        'status': user.status,
+        'role': user.role
+      }).eq('id', user.id);
+      await _supabase.rpc('update_user_sensitive_profile', params: {
+        'p_user_id': user.id,
+        'p_cpf': user.cpf,
+        'p_phone': user.phone,
+      });
       return getUserById(user.id);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar usuário: $e');
@@ -411,24 +437,29 @@ class AdminSupabaseDataSource implements AdminDataSource {
     }
   }
 
-  UserAdminModel _userFromRow(Map<String, dynamic> e) {
+  UserAdminModel _userFromRow(
+    Map<String, dynamic> e, {
+    String? cpf,
+    String? phone,
+  }) {
     final subs = e['subscriptions'] as List<dynamic>?;
     final activeSub = subs?.firstWhere(
-          (s) => s['is_current'] == true,
-          orElse: () => null,
-        ) as Map<String, dynamic>?;
+      (s) => s['is_current'] == true,
+      orElse: () => null,
+    ) as Map<String, dynamic>?;
     return UserAdminModel(
       id: e['id'] as String,
       name: e['name'] as String,
       email: e['email'] as String,
-      cpf: '***.***.***-**',
-      phone: '(**) *****-****',
+      cpf: cpf ?? '***.***.***-**',
+      phone: phone ?? '(**) *****-****',
       currentPlanId: activeSub?['plan_id'] as String?,
       planLevelName: activeSub?['badge_level'] as String? ?? 'sem plano',
       status: e['status'] as String,
       memberSince: e['member_since'] as String,
       planActivationDate: activeSub?['activation_date'] as String?,
       role: e['role'] as String? ?? 'user',
+      receptionistCode: e['receptionist_code'] as String?,
     );
   }
 
@@ -441,7 +472,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('payments')
-          .select('id, user_id, amount, method, status, receipt_number, paid_at, created_at, profiles(name), subscriptions(plans(name))')
+          .select(
+              'id, user_id, amount, method, status, receipt_number, paid_at, created_at, profiles(name), subscriptions(plans(name))')
           .order('created_at', ascending: false);
       return (data as List).map((e) => _paymentFromRow(e)).toList();
     } catch (e) {
@@ -454,7 +486,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('payments')
-          .select('id, user_id, amount, method, status, receipt_number, paid_at, created_at, profiles(name), subscriptions(plans(name))')
+          .select(
+              'id, user_id, amount, method, status, receipt_number, paid_at, created_at, profiles(name), subscriptions(plans(name))')
           .eq('id', id)
           .single();
       return _paymentFromRow(data);
@@ -474,8 +507,9 @@ class AdminSupabaseDataSource implements AdminDataSource {
             'method': payment.method,
             'status': payment.status,
             'receipt_number': payment.receiptNumber,
-            'paid_at':
-                payment.status == 'aprovado' ? DateTime.now().toIso8601String() : null,
+            'paid_at': payment.status == 'aprovado'
+                ? DateTime.now().toIso8601String()
+                : null,
           })
           .select('id')
           .single();
@@ -490,8 +524,7 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       await _supabase
           .from('payments')
-          .update({'status': payment.status})
-          .eq('id', payment.id);
+          .update({'status': payment.status}).eq('id', payment.id);
       return getPaymentById(payment.id);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar pagamento: $e');
@@ -510,10 +543,9 @@ class AdminSupabaseDataSource implements AdminDataSource {
   PaymentAdminModel _paymentFromRow(Map<String, dynamic> e) {
     final userName =
         (e['profiles'] as Map<String, dynamic>?)?['name'] as String? ?? '';
-    final planName =
-        ((e['subscriptions'] as Map<String, dynamic>?)?['plans']
-                as Map<String, dynamic>?)?['name'] as String? ??
-            '';
+    final planName = ((e['subscriptions'] as Map<String, dynamic>?)?['plans']
+            as Map<String, dynamic>?)?['name'] as String? ??
+        '';
     return PaymentAdminModel(
       id: e['id'] as String,
       userId: e['user_id'] as String,
@@ -536,7 +568,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('consultations')
-          .select('id, title, subtitle, scheduled_date, status, user_id, professional_id, profiles(name), professionals(name)')
+          .select(
+              'id, title, subtitle, scheduled_date, status, user_id, professional_id, profiles(name), professionals(name)')
           .order('scheduled_date', ascending: false);
       return (data as List).map((e) => _consultationFromRow(e)).toList();
     } catch (e) {
@@ -549,7 +582,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('consultations')
-          .select('id, title, subtitle, scheduled_date, status, user_id, professional_id, profiles(name), professionals(name)')
+          .select(
+              'id, title, subtitle, scheduled_date, status, user_id, professional_id, profiles(name), professionals(name)')
           .eq('id', id)
           .single();
       return _consultationFromRow(data);
@@ -584,15 +618,12 @@ class AdminSupabaseDataSource implements AdminDataSource {
   Future<ConsultationAdminModel> updateConsultation(
       ConsultationAdminEntity consultation) async {
     try {
-      await _supabase
-          .from('consultations')
-          .update({
-            'title': consultation.title,
-            'subtitle': consultation.subtitle,
-            'scheduled_date': consultation.date.toIso8601String(),
-            'professional_id': consultation.professionalId,
-          })
-          .eq('id', consultation.id);
+      await _supabase.from('consultations').update({
+        'title': consultation.title,
+        'subtitle': consultation.subtitle,
+        'scheduled_date': consultation.date.toIso8601String(),
+        'professional_id': consultation.professionalId,
+      }).eq('id', consultation.id);
       return getConsultationById(consultation.id);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar consulta: $e');
@@ -680,16 +711,13 @@ class AdminSupabaseDataSource implements AdminDataSource {
   Future<NotificationTemplateModel> updateNotification(
       NotificationTemplateEntity notification) async {
     try {
-      await _supabase
-          .from('notification_templates')
-          .update({
-            'title': notification.title,
-            'body': notification.body,
-            'type': notification.type,
-            'trigger_event': notification.triggerEvent,
-            'is_active': notification.isActive,
-          })
-          .eq('id', notification.id);
+      await _supabase.from('notification_templates').update({
+        'title': notification.title,
+        'body': notification.body,
+        'type': notification.type,
+        'trigger_event': notification.triggerEvent,
+        'is_active': notification.isActive,
+      }).eq('id', notification.id);
       return getNotificationById(notification.id);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar template: $e');
@@ -714,6 +742,78 @@ class AdminSupabaseDataSource implements AdminDataSource {
       triggerEvent: e['trigger_event'] as String,
       isActive: e['is_active'] as bool,
     );
+  }
+
+  @override
+  Future<List<NotificationCampaignModel>> getNotificationCampaigns() async {
+    try {
+      final data = await _supabase
+          .from('notification_campaigns')
+          .select(
+            'id, title, body, type, audience, target_user_id, data, '
+            'created_by, recipient_count, created_at',
+          )
+          .order('created_at', ascending: false)
+          .limit(100);
+      return (data as List)
+          .map((e) => NotificationCampaignModel.fromJson(
+                e as Map<String, dynamic>,
+              ))
+          .toList();
+    } catch (e) {
+      throw ServerException(message: 'Erro ao buscar campanhas: $e');
+    }
+  }
+
+  @override
+  Future<SendCampaignResult> sendNotificationCampaign({
+    required String title,
+    required String body,
+    required String type,
+    required String audience,
+    String? targetUserId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final result = await _supabase.rpc(
+        'send_notification_campaign',
+        params: {
+          'p_title': title,
+          'p_body': body,
+          'p_type': type,
+          'p_audience': audience,
+          'p_target_user_id': targetUserId,
+          'p_data': data,
+        },
+      );
+      final map = Map<String, dynamic>.from(result as Map);
+      final campaignId = map['campaign_id'] as String;
+      unawaited(_dispatchPush(campaignId));
+      return SendCampaignResult(
+        campaignId: campaignId,
+        recipientCount: (map['recipient_count'] as num?)?.toInt() ?? 0,
+      );
+    } on PostgrestException catch (e) {
+      throw ServerException(
+        message: RateLimitMessages.messageOrNull(e) ?? e.message,
+      );
+    } catch (e) {
+      throw ServerException(
+        message:
+            RateLimitMessages.messageOrNull(e) ?? 'Erro ao enviar campanha: $e',
+      );
+    }
+  }
+
+  Future<void> _dispatchPush(String campaignId) async {
+    try {
+      await _supabase.functions.invoke(
+        'send-push-campaign',
+        body: {'campaignId': campaignId},
+      );
+    } catch (_) {
+      // Inbox in-app já foi gravada; falha de FCM não desfaz o envio.
+    }
   }
 
   // ============================================================
@@ -777,23 +877,19 @@ class AdminSupabaseDataSource implements AdminDataSource {
   @override
   Future<DrawModel> updateDraw(DrawEntity draw) async {
     try {
-      await _supabase
-          .from('draws')
-          .update({
-            'name': draw.name,
-            'prize_name': draw.prizeName,
-            'prize_description': draw.prizeDescription,
-            'prize_image_url': draw.prizeImageUrl,
-            'draw_date': draw.drawDate.toIso8601String(),
-            'registration_start_date':
-                draw.registrationStartDate?.toIso8601String(),
-            'registration_end_date':
-                draw.registrationEndDate?.toIso8601String(),
-            'status': draw.status,
-            'eligible_plan_levels': draw.eligiblePlanLevels,
-            'rules': draw.rules,
-          })
-          .eq('id', draw.id);
+      await _supabase.from('draws').update({
+        'name': draw.name,
+        'prize_name': draw.prizeName,
+        'prize_description': draw.prizeDescription,
+        'prize_image_url': draw.prizeImageUrl,
+        'draw_date': draw.drawDate.toIso8601String(),
+        'registration_start_date':
+            draw.registrationStartDate?.toIso8601String(),
+        'registration_end_date': draw.registrationEndDate?.toIso8601String(),
+        'status': draw.status,
+        'eligible_plan_levels': draw.eligiblePlanLevels,
+        'rules': draw.rules,
+      }).eq('id', draw.id);
       return getDrawById(draw.id);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar sorteio: $e');
@@ -823,8 +919,9 @@ class AdminSupabaseDataSource implements AdminDataSource {
       final winnerIndex = random.nextInt(participants.length);
       final winnerId = participants[winnerIndex]['user_id'] as String;
       final now = DateTime.now();
-      final seedHash =
-          sha256.convert(utf8.encode('${drawId}_${now.millisecondsSinceEpoch}')).toString();
+      final seedHash = sha256
+          .convert(utf8.encode('${drawId}_${now.millisecondsSinceEpoch}'))
+          .toString();
       final listHash =
           sha256.convert(utf8.encode(participants.toString())).toString();
       await _supabase.from('draws').update({
@@ -860,8 +957,7 @@ class AdminSupabaseDataSource implements AdminDataSource {
       status: e['status'] as String,
       participantCount: e['participant_count'] as int? ?? 0,
       winnerId: e['winner_id'] as String?,
-      winnerName:
-          (e['profiles'] as Map<String, dynamic>?)?['name'] as String?,
+      winnerName: (e['profiles'] as Map<String, dynamic>?)?['name'] as String?,
       eligiblePlanLevels: (e['eligible_plan_levels'] as List<dynamic>?)
               ?.map((l) => l.toString())
               .toList() ??
@@ -885,7 +981,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('coupons')
-          .select('id, code, description, discount_percentage, expiry_date, usage_limit, used_count, is_active')
+          .select(
+              'id, code, description, discount_percentage, expiry_date, usage_limit, used_count, is_active')
           .order('created_at', ascending: false);
       return (data as List).map((e) => _couponFromRow(e)).toList();
     } catch (e) {
@@ -898,7 +995,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('coupons')
-          .select('id, code, description, discount_percentage, expiry_date, usage_limit, used_count, is_active')
+          .select(
+              'id, code, description, discount_percentage, expiry_date, usage_limit, used_count, is_active')
           .eq('id', id)
           .single();
       return _couponFromRow(data);
@@ -931,16 +1029,13 @@ class AdminSupabaseDataSource implements AdminDataSource {
   @override
   Future<CouponModel> updateCoupon(CouponEntity coupon) async {
     try {
-      await _supabase
-          .from('coupons')
-          .update({
-            'description': coupon.description,
-            'discount_percentage': coupon.discountPercentage,
-            'expiry_date': coupon.expiryDate.toIso8601String(),
-            'usage_limit': coupon.usageLimit,
-            'is_active': coupon.isActive,
-          })
-          .eq('id', coupon.id);
+      await _supabase.from('coupons').update({
+        'description': coupon.description,
+        'discount_percentage': coupon.discountPercentage,
+        'expiry_date': coupon.expiryDate.toIso8601String(),
+        'usage_limit': coupon.usageLimit,
+        'is_active': coupon.isActive,
+      }).eq('id', coupon.id);
       return getCouponById(coupon.id);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar cupom: $e');
@@ -1033,8 +1128,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       await _supabase
           .from('cancellation_reasons')
-          .update({'text': reason.text, 'is_active': reason.isActive})
-          .eq('id', reason.id);
+          .update({'text': reason.text, 'is_active': reason.isActive}).eq(
+              'id', reason.id);
       return getCancellationReasonById(reason.id);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar motivo: $e');
@@ -1059,7 +1154,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('badges')
-          .select('id, level_name, display_name, badge_image_url, progress_color, progress_bg_color, sort_order, discount_percentage, max_consultations_per_month')
+          .select(
+              'id, level_name, display_name, badge_image_url, progress_color, progress_bg_color, sort_order, discount_percentage, max_consultations_per_month')
           .order('sort_order');
       return (data as List).map((e) => _badgeFromRow(e)).toList();
     } catch (e) {
@@ -1072,7 +1168,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
     try {
       final data = await _supabase
           .from('badges')
-          .select('id, level_name, display_name, badge_image_url, progress_color, progress_bg_color, sort_order, discount_percentage, max_consultations_per_month')
+          .select(
+              'id, level_name, display_name, badge_image_url, progress_color, progress_bg_color, sort_order, discount_percentage, max_consultations_per_month')
           .eq('id', id)
           .single();
       return _badgeFromRow(data);
@@ -1107,18 +1204,15 @@ class AdminSupabaseDataSource implements AdminDataSource {
   @override
   Future<BadgeModel> updateBadge(BadgeEntity badge) async {
     try {
-      await _supabase
-          .from('badges')
-          .update({
-            'display_name': badge.displayName,
-            'badge_image_url': badge.badgeImageUrl,
-            'progress_color': badge.progressColor,
-            'progress_bg_color': badge.progressBgColor,
-            'sort_order': badge.sortOrder,
-            'discount_percentage': badge.discountPercentage,
-            'max_consultations_per_month': badge.maxConsultationsPerMonth,
-          })
-          .eq('id', badge.id);
+      await _supabase.from('badges').update({
+        'display_name': badge.displayName,
+        'badge_image_url': badge.badgeImageUrl,
+        'progress_color': badge.progressColor,
+        'progress_bg_color': badge.progressBgColor,
+        'sort_order': badge.sortOrder,
+        'discount_percentage': badge.discountPercentage,
+        'max_consultations_per_month': badge.maxConsultationsPerMonth,
+      }).eq('id', badge.id);
       return getBadgeById(badge.id);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar badge: $e');
@@ -1143,10 +1237,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
       progressColor: e['progress_color'] as int? ?? 0,
       progressBgColor: e['progress_bg_color'] as int? ?? 0,
       sortOrder: e['sort_order'] as int? ?? 0,
-      discountPercentage:
-          (e['discount_percentage'] as num?)?.toDouble() ?? 0,
-      maxConsultationsPerMonth:
-          e['max_consultations_per_month'] as int? ?? 0,
+      discountPercentage: (e['discount_percentage'] as num?)?.toDouble() ?? 0,
+      maxConsultationsPerMonth: e['max_consultations_per_month'] as int? ?? 0,
     );
   }
 }

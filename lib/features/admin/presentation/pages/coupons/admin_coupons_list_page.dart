@@ -52,7 +52,7 @@ class _CouponsListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Cupom excluido com sucesso!',
+                'Cupom excluído com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -62,7 +62,7 @@ class _CouponsListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                state.errorMessage ?? 'Erro ao processar operacao.',
+                state.errorMessage ?? 'Erro ao processar operação.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.errorColor,
@@ -149,7 +149,7 @@ class _CouponsListView extends StatelessWidget {
                       icon: Icons.confirmation_number_outlined,
                       message: 'Nenhum cupom encontrado',
                       subtitle:
-                          'Toque no botao + para cadastrar um novo cupom.',
+                          'Toque no botão + para cadastrar um novo cupom.',
                     );
                   }
 

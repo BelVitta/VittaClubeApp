@@ -4,6 +4,17 @@ import '../../domain/entities/user_entity.dart';
 
 enum AuthStatus { initial, loading, success, failure }
 
+/// Origem do erro de auth — evita mostrar falha do Google no campo de senha.
+enum AuthErrorSource {
+  none,
+  /// Validação local de formulário ou falha de login e-mail/senha.
+  credentials,
+  /// Falha de registro e-mail/senha.
+  register,
+  /// Google / social.
+  social,
+}
+
 class AuthState extends Equatable {
   final String name;
   final String cpf;
@@ -11,11 +22,13 @@ class AuthState extends Equatable {
   final String email;
   final String password;
   final String confirmPassword;
+  final String receptionistCode;
   final bool isPasswordVisible;
   final bool isConfirmPasswordVisible;
   final bool showFieldErrors;
   final AuthStatus status;
   final String? errorMessage;
+  final AuthErrorSource errorSource;
   final UserEntity? user;
 
   const AuthState({
@@ -25,11 +38,13 @@ class AuthState extends Equatable {
     this.email = '',
     this.password = '',
     this.confirmPassword = '',
+    this.receptionistCode = '',
     this.isPasswordVisible = false,
     this.isConfirmPasswordVisible = false,
     this.showFieldErrors = false,
     this.status = AuthStatus.initial,
     this.errorMessage,
+    this.errorSource = AuthErrorSource.none,
     this.user,
   });
 
@@ -95,10 +110,27 @@ class AuthState extends Equatable {
               ? 'Confirme sua senha'
               : null;
 
-  // Erro do servidor (credenciais inválidas, email em uso, etc.)
-  // Só aparece quando o formulário era válido mas o servidor rejeitou
+  // Erro genérico (compat register/outros) — sem source social.
   String? get serverError =>
-      status == AuthStatus.failure && !showFieldErrors ? errorMessage : null;
+      status == AuthStatus.failure &&
+              !showFieldErrors &&
+              errorSource != AuthErrorSource.social
+          ? errorMessage
+          : null;
+
+  /// Só para login e-mail/senha (campo senha).
+  String? get credentialsError =>
+      status == AuthStatus.failure &&
+              errorSource == AuthErrorSource.credentials &&
+              !showFieldErrors
+          ? errorMessage
+          : null;
+
+  /// Erro do Google / social — banner perto do botão social.
+  String? get socialError =>
+      status == AuthStatus.failure && errorSource == AuthErrorSource.social
+          ? errorMessage
+          : null;
 
   AuthState copyWith({
     String? name,
@@ -107,11 +139,13 @@ class AuthState extends Equatable {
     String? email,
     String? password,
     String? confirmPassword,
+    String? receptionistCode,
     bool? isPasswordVisible,
     bool? isConfirmPasswordVisible,
     bool? showFieldErrors,
     AuthStatus? status,
     String? errorMessage,
+    AuthErrorSource? errorSource,
     UserEntity? user,
   }) {
     return AuthState(
@@ -121,12 +155,14 @@ class AuthState extends Equatable {
       email: email ?? this.email,
       password: password ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,
+      receptionistCode: receptionistCode ?? this.receptionistCode,
       isPasswordVisible: isPasswordVisible ?? this.isPasswordVisible,
       isConfirmPasswordVisible:
           isConfirmPasswordVisible ?? this.isConfirmPasswordVisible,
       showFieldErrors: showFieldErrors ?? this.showFieldErrors,
       status: status ?? this.status,
       errorMessage: errorMessage,
+      errorSource: errorSource ?? this.errorSource,
       user: user ?? this.user,
     );
   }
@@ -139,11 +175,13 @@ class AuthState extends Equatable {
         email,
         password,
         confirmPassword,
+        receptionistCode,
         isPasswordVisible,
         isConfirmPasswordVisible,
         showFieldErrors,
         status,
         errorMessage,
+        errorSource,
         user,
       ];
 }

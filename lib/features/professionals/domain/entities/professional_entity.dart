@@ -6,6 +6,11 @@ class ProfessionalEntity extends Equatable {
   final String name;
   final String specialtyName;
   final String availableDays;
+
+  /// Observação livre pra disponibilidade que não cabe num conjunto de dias
+  /// da semana (ex.: "atende 1x por mês"). Quando preenchida, tem
+  /// prioridade sobre [availableDays] na exibição.
+  final String? availabilityNote;
   final String? avatarUrl;
   final int avatarBgColor;
 
@@ -14,6 +19,7 @@ class ProfessionalEntity extends Equatable {
     required this.name,
     required this.specialtyName,
     required this.availableDays,
+    this.availabilityNote,
     this.avatarUrl,
     required this.avatarBgColor,
   });
@@ -24,6 +30,7 @@ class ProfessionalEntity extends Equatable {
         name,
         specialtyName,
         availableDays,
+        availabilityNote,
         avatarUrl,
         avatarBgColor,
       ];

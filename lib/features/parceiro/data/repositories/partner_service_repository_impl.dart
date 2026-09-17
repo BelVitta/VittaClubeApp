@@ -12,7 +12,8 @@ class PartnerServiceRepositoryImpl implements PartnerServiceRepository {
   PartnerServiceRepositoryImpl({required this.dataSource});
 
   @override
-  Future<Either<Failure, List<PartnerServiceEntity>>> getByPartnerId(String partnerId) async {
+  Future<Either<Failure, List<PartnerServiceEntity>>> getByPartnerId(
+      String partnerId) async {
     try {
       final result = await dataSource.getServicesByPartnerId(partnerId);
       return Right(result);
@@ -36,7 +37,8 @@ class PartnerServiceRepositoryImpl implements PartnerServiceRepository {
   }
 
   @override
-  Future<Either<Failure, PartnerServiceEntity>> create(PartnerServiceEntity entity) async {
+  Future<Either<Failure, PartnerServiceEntity>> create(
+      PartnerServiceEntity entity) async {
     try {
       final result = await dataSource.createService(entity);
       return Right(result);
@@ -48,7 +50,8 @@ class PartnerServiceRepositoryImpl implements PartnerServiceRepository {
   }
 
   @override
-  Future<Either<Failure, PartnerServiceEntity>> update(PartnerServiceEntity entity) async {
+  Future<Either<Failure, PartnerServiceEntity>> update(
+      PartnerServiceEntity entity) async {
     try {
       final result = await dataSource.updateService(entity);
       return Right(result);

@@ -133,14 +133,14 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
             children: [
               // Nome do nivel
               AdminFormField(
-                label: 'Nome do Nivel',
+                label: 'Nome do Nível',
                 controller: _levelNameController,
               ),
               const SizedBox(height: 16),
 
               // Nome de exibicao
               AdminFormField(
-                label: 'Nome de Exibicao',
+                label: 'Nome de exibição',
                 controller: _displayNameController,
               ),
               const SizedBox(height: 16),
@@ -294,7 +294,7 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
 
               // Consultas/Mes
               AdminFormField(
-                label: 'Consultas/Mes',
+                label: 'Consultas/Mês',
                 controller: _maxConsultationsController,
                 keyboardType: TextInputType.number,
               ),
@@ -302,7 +302,7 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
 
               // Ordem de exibicao
               AdminFormField(
-                label: 'Ordem de Exibicao',
+                label: 'Ordem de exibição',
                 controller: _sortOrderController,
                 keyboardType: TextInputType.number,
               ),

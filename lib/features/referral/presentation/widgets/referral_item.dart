@@ -126,7 +126,7 @@ class ReferralItem extends StatelessWidget {
   String get _statusText {
     switch (referral.status) {
       case ReferralStatus.pending:
-        return 'Codigo: ${referral.referralCode}';
+        return 'Código: ${referral.referralCode}';
       case ReferralStatus.active:
         if (referral.referredCompletedConsultation) {
           return 'Indicado realizou consulta';
@@ -135,7 +135,7 @@ class ReferralItem extends StatelessWidget {
       case ReferralStatus.rewarded:
         return 'Recompensa resgatada';
       case ReferralStatus.expired:
-        return 'Indicacao expirada';
+        return 'Indicação expirada';
     }
   }
 

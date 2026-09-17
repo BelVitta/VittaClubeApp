@@ -23,7 +23,11 @@ class DependentWithQuota extends Equatable {
 class GetDependentsParams {
   final String holderUserId;
   final String cycleReference;
-  final DependentStatus status;
+
+  /// `null` = todos os status (pending/active/inactive). Passe `null`
+  /// explicitamente pra isso — o default continua `active` pra manter
+  /// compatibilidade com quem já chamava sem informar.
+  final DependentStatus? status;
 
   const GetDependentsParams({
     required this.holderUserId,

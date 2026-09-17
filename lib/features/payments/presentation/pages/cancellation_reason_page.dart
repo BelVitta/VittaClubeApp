@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/error/rate_limit.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../subscription/domain/entities/subscription_status.dart';
@@ -79,8 +80,10 @@ class _CancellationReasonPageState extends State<CancellationReasonPage> {
         ..pop();
     } catch (e) {
       if (!mounted) return;
+      final message =
+          RateLimitMessages.messageOrNull(e) ?? 'Não foi possível cancelar: $e';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível cancelar: $e')),
+        SnackBar(content: Text(message)),
       );
     } finally {
       if (mounted) setState(() => _processing = false);
@@ -127,8 +130,8 @@ class _CancellationReasonPageState extends State<CancellationReasonPage> {
                           width: 39,
                           height: 39,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF01225B)
-                                .withValues(alpha: 0.2),
+                            color:
+                                const Color(0xFF01225B).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(19.5),
                           ),
                           child: const Icon(

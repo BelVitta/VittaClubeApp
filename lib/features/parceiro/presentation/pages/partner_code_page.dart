@@ -1,54 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../admin/presentation/widgets/admin_page_scaffold.dart';
+import '../../domain/entities/partner_entity.dart';
+import '../../domain/usecases/partner/regenerate_code_usecase.dart';
 
 class PartnerCodePage extends StatefulWidget {
-  final String partnerId;
+  final PartnerEntity partner;
 
-  const PartnerCodePage({super.key, required this.partnerId});
+  const PartnerCodePage({super.key, required this.partner});
 
   @override
   State<PartnerCodePage> createState() => _PartnerCodePageState();
 }
 
 class _PartnerCodePageState extends State<PartnerCodePage> {
-  // Mock code - will come from BLoC later
-  String _code = 'LABSAUDE';
+  late String _code = widget.partner.code;
+  bool _regenerating = false;
 
-  void _handleRegenerate() {
-    showDialog(
+  Future<void> _handleRegenerate() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Regenerar Codigo'),
+        title: const Text('Regenerar código'),
         content: const Text(
-          'Tem certeza? O codigo atual sera invalidado e um novo sera gerado.',
+          'Tem certeza? O código atual será invalidado e um novo será gerado.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               'Cancelar',
               style: TextStyle(color: AppTheme.primaryColor),
             ),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                _code = 'NOVO${DateTime.now().millisecond}';
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Codigo regenerado com sucesso!',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 13),
-                  ),
-                  backgroundColor: AppTheme.successColor,
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text(
               'Regenerar',
               style: TextStyle(color: Colors.red),
@@ -57,12 +46,39 @@ class _PartnerCodePageState extends State<PartnerCodePage> {
         ],
       ),
     );
+    if (confirmed != true) return;
+
+    setState(() => _regenerating = true);
+    final result = await sl<RegenerateCodeUseCase>()(widget.partner.id);
+    if (!mounted) return;
+    setState(() => _regenerating = false);
+
+    result.fold(
+      (failure) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(failure.message),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      ),
+      (updated) {
+        setState(() => _code = updated.code);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Código regenerado com sucesso!',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13),
+            ),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return AdminPageScaffold(
-      title: 'Meu Codigo',
+      title: 'Meu código',
       body: Column(
         children: [
           const SizedBox(height: 32),
@@ -80,7 +96,7 @@ class _PartnerCodePageState extends State<PartnerCodePage> {
             child: Column(
               children: [
                 Text(
-                  'Codigo do Parceiro',
+                  'Código do parceiro',
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -99,7 +115,7 @@ class _PartnerCodePageState extends State<PartnerCodePage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Informe este codigo para os clientes\nno momento da validacao do desconto.',
+                  'Informe este código para os clientes\nno momento da validação do desconto.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
@@ -113,8 +129,8 @@ class _PartnerCodePageState extends State<PartnerCodePage> {
           ),
           const SizedBox(height: 24),
           PrimaryButton(
-            text: 'Regenerar Codigo',
-            onPressed: _handleRegenerate,
+            text: _regenerating ? 'Regenerando...' : 'Regenerar código',
+            onPressed: _regenerating ? null : _handleRegenerate,
           ),
         ],
       ),

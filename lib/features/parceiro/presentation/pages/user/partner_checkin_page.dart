@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../../core/config/supabase_config.dart';
 import '../../../../../core/di/injection_container.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../shared/widgets/primary_button.dart';
@@ -46,6 +47,7 @@ class _PartnerCheckinView extends StatefulWidget {
 
 class _PartnerCheckinViewState extends State<_PartnerCheckinView> {
   final _codeController = TextEditingController();
+  final _userId = SupabaseConfig.client.auth.currentUser?.id ?? '';
 
   @override
   void dispose() {
@@ -60,7 +62,7 @@ class _PartnerCheckinViewState extends State<_PartnerCheckinView> {
         if (state.status == PartnerCheckinStatus.failure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage ?? 'Erro na validacao'),
+              content: Text(state.errorMessage ?? 'Erro na validação'),
               backgroundColor: AppTheme.errorColor,
             ),
           );
@@ -153,7 +155,7 @@ class _PartnerCheckinViewState extends State<_PartnerCheckinView> {
         const SizedBox(height: 32),
         // Instructions
         Text(
-          'Gere um token para validar seu desconto.\nMostre o token ao atendente e digite\no codigo do parceiro.',
+          'Gere um token para validar seu desconto.\nMostre o token ao atendente e digite\no código do parceiro.',
           textAlign: TextAlign.center,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
@@ -170,7 +172,7 @@ class _PartnerCheckinViewState extends State<_PartnerCheckinView> {
               ? null
               : () {
                   context.read<PartnerCheckinBloc>().add(
-                        const GenerateCheckinToken('mock-user-001'),
+                        GenerateCheckinToken(_userId),
                       );
                 },
         ),
@@ -201,7 +203,7 @@ class _PartnerCheckinViewState extends State<_PartnerCheckinView> {
         const SizedBox(height: 24),
         // Partner code input
         Text(
-          'Digite o codigo do parceiro',
+          'Digite o código do parceiro',
           style: GoogleFonts.outfit(
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -250,14 +252,14 @@ class _PartnerCheckinViewState extends State<_PartnerCheckinView> {
                   if (code.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Digite o codigo do parceiro'),
+                        content: Text('Digite o código do parceiro'),
                       ),
                     );
                     return;
                   }
                   context.read<PartnerCheckinBloc>().add(
                         SubmitPartnerCode(
-                          userId: 'mock-user-001',
+                          userId: _userId,
                           token: state.tokenValue!,
                           partnerCode: code,
                           serviceId: widget.service.id,

@@ -6,7 +6,9 @@
 - [ ] Dashboard Supabase → New Project → `vita-clube-dev`
 - [ ] Guardar URL e anon key
 - [ ] Ativar extensões: `uuid-ossp`, `pgcrypto`, `pgsodium`
-- [ ] `ALTER DATABASE postgres SET app.encryption_key = '<chave-forte>';`
+- [x] Chave de criptografia via Supabase Vault (`vita_clube_encryption_key`)
+      — migration `20260711000400_encryption_key_via_vault.sql`
+      (`ALTER DATABASE ... app.encryption_key` é bloqueado na plataforma)
 
 ## Aplicar schema no dev
 - [ ] Rodar `supabase/schema.sql` inteiro no SQL Editor

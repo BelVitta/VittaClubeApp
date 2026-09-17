@@ -15,7 +15,7 @@ class ConsultationSupabaseDataSource {
     final rows = await _supabase
         .from('consultations')
         .select('id, title, subtitle, scheduled_date, status, professional_id,'
-            ' final_value, discount_percentage,'
+            ' final_value, discount_percentage, discount_amount,'
             ' professionals(name, specialty_id, specialties(name))')
         .eq('user_id', userId)
         .order('scheduled_date', ascending: false)

@@ -198,7 +198,7 @@ class _ConsultationValueSheetState extends State<ConsultationValueSheet> {
       child: Text(
         'Valor original ${DiscountService.formatPrice(_originalValue)} | '
         'Desconto ${_discountPercentage.toStringAsFixed(0)}% | '
-        'Você economiza ${DiscountService.formatPrice(_discountAmount)} | '
+        'Cliente economiza ${DiscountService.formatPrice(_discountAmount)} | '
         'Final ${DiscountService.formatPrice(_finalValue)}',
         style: GoogleFonts.plusJakartaSans(
           fontSize: 13,

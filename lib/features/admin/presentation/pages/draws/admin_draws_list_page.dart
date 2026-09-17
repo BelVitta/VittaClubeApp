@@ -33,8 +33,8 @@ class _DrawsListView extends StatelessWidget {
 
   static const _statusDisplayMap = {
     'agendado': 'Agendado',
-    'inscricoes_abertas': 'Inscricoes Abertas',
-    'inscricoes_encerradas': 'Inscricoes Encerradas',
+    'inscricoes_abertas': 'Inscrições abertas',
+    'inscricoes_encerradas': 'Inscrições encerradas',
     'realizado': 'Realizado',
     'cancelado': 'Cancelado',
   };
@@ -86,7 +86,7 @@ class _DrawsListView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Voce esta prestes a realizar o sorteio:',
+              'Você está prestes a realizar o sorteio:',
               style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF6D7F95)),
             ),
             const SizedBox(height: 12),
@@ -109,7 +109,7 @@ class _DrawsListView extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Premio: ${draw.prizeName}',
+                    'Prêmio: ${draw.prizeName}',
                     style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF6D7F95)),
                   ),
                   Text(
@@ -133,7 +133,7 @@ class _DrawsListView extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Esta acao e irreversivel. O sistema selecionara um vencedor automaticamente usando um algoritmo transparente e auditavel.',
+                      'Esta ação é irreversível. O sistema selecionará um vencedor automaticamente usando um algoritmo transparente e auditável.',
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         color: const Color(0xFFE65100),
@@ -230,7 +230,7 @@ class _DrawsListView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'O resultado foi gerado por um algoritmo transparente e auditavel. Consulte os detalhes do sorteio para ver as informacoes de auditoria.',
+              'O resultado foi gerado por um algoritmo transparente e auditável. Consulte os detalhes do sorteio para ver as informações de auditoria.',
               textAlign: TextAlign.center,
               style: GoogleFonts.outfit(
                 fontSize: 11,
@@ -284,7 +284,7 @@ class _DrawsListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Sorteio excluido com sucesso!',
+                'Sorteio excluído com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -296,7 +296,7 @@ class _DrawsListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                state.errorMessage ?? 'Erro ao processar operacao.',
+                state.errorMessage ?? 'Erro ao processar operação.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.errorColor,
@@ -395,7 +395,7 @@ class _DrawsListView extends StatelessWidget {
                       icon: Icons.emoji_events_outlined,
                       message: 'Nenhum sorteio encontrado',
                       subtitle:
-                          'Toque no botao + para cadastrar um novo sorteio.',
+                          'Toque no botão + para cadastrar um novo sorteio.',
                     );
                   }
 

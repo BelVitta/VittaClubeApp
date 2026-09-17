@@ -11,6 +11,7 @@ class AdminFormField extends StatelessWidget {
   final bool readOnly;
   final bool enabled;
   final int maxLines;
+  final int? maxLength;
   final Widget? suffixIcon;
   final String? hintText;
   final String? Function(String?)? validator;
@@ -24,6 +25,7 @@ class AdminFormField extends StatelessWidget {
     this.readOnly = false,
     this.enabled = true,
     this.maxLines = 1,
+    this.maxLength,
     this.suffixIcon,
     this.hintText,
     this.validator,
@@ -61,8 +63,10 @@ class AdminFormField extends StatelessWidget {
             readOnly: readOnly,
             enabled: enabled,
             maxLines: maxLines,
+            maxLength: maxLength,
             onChanged: onChanged,
             validator: enabled ? validator : null,
+            textAlignVertical: TextAlignVertical.center,
             style: GoogleFonts.outfit(
               fontSize: 13,
               fontWeight: FontWeight.w400,
@@ -70,11 +74,13 @@ class AdminFormField extends StatelessWidget {
             ),
             decoration: InputDecoration(
               border: InputBorder.none,
+              isDense: true,
               contentPadding: EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: isMultiline ? 12 : 0,
+                vertical: isMultiline ? 12 : 14,
               ),
               suffixIcon: suffixIcon,
+              counterText: maxLength != null ? '' : null,
               hintText: hintText,
               hintStyle: GoogleFonts.outfit(
                 fontSize: 13,

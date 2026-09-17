@@ -23,8 +23,8 @@ class FutureAppointmentsQuotaWarning extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        'Este beneficiario ja tem $futureAppointments agendamentos futuros. '
-        'A cota so sera debitada na validacao do QR pela recepcao.',
+        'Este beneficiário já tem $futureAppointments agendamentos futuros. '
+        'A cota só será debitada na validação do QR pela recepção.',
         style: AppTheme.bodyMedium,
       ),
     );

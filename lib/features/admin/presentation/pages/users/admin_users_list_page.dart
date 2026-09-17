@@ -45,7 +45,7 @@ class _UsersListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Usuario salvo com sucesso!',
+                'Usuário salvo com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -55,7 +55,7 @@ class _UsersListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Usuario excluido com sucesso!',
+                'Usuário excluído com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -65,7 +65,7 @@ class _UsersListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                state.errorMessage ?? 'Erro ao processar operacao.',
+                state.errorMessage ?? 'Erro ao processar operação.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.errorColor,
@@ -76,7 +76,7 @@ class _UsersListView extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: AdminPageScaffold(
-          title: 'Usuarios',
+          title: 'Usuários',
           body: Column(
             children: [
               AdminSearchBar(
@@ -117,12 +117,12 @@ class _UsersListView extends StatelessWidget {
                         const SizedBox(width: 8),
                         AdminFilterChip(
                           icon: Icons.workspace_premium_outlined,
-                          label: state.filterLevel ?? 'Nivel',
+                          label: state.filterLevel ?? 'Nível',
                           isActive: state.filterLevel != null,
                           onTap: () {
                             AdminFilterChip.showFilterBottomSheet(
                               context,
-                              title: 'Filtrar por Nivel',
+                              title: 'Filtrar por Nível',
                               options: _levelOptions,
                               current: state.filterLevel,
                               onSelected: (value) {
@@ -166,9 +166,9 @@ class _UsersListView extends StatelessWidget {
                       state.status == UserAdminStatus.loaded) {
                     return const AdminEmptyState(
                       icon: Icons.people_outlined,
-                      message: 'Nenhum usuario encontrado',
+                      message: 'Nenhum usuário encontrado',
                       subtitle:
-                          'Toque no botao + para cadastrar um novo usuario.',
+                          'Toque no botão + para cadastrar um novo usuário.',
                     );
                   }
 

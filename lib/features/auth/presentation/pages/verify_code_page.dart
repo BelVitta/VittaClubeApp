@@ -64,7 +64,8 @@ class _VerifyCodePageState extends State<VerifyCodePage>
   void _verifyCode() async {
     if (_code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, insira o código de 6 dígitos')),
+        const SnackBar(
+            content: Text('Por favor, insira o código de 6 dígitos')),
       );
       return;
     }
@@ -138,19 +139,44 @@ class _VerifyCodePageState extends State<VerifyCodePage>
             opacity: _fadeAnimation,
             child: Stack(
               children: [
-                // Decorative gradient circle in top right
+                // Decorative gradient wash across the top
                 Positioned(
-                  top: -100,
-                  right: -100,
+                  top: -60,
+                  left: -40,
+                  right: -40,
                   child: Container(
-                    width: 300,
-                    height: 300,
+                    height: 340,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(220),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.gradientLight.withValues(alpha: 0.65),
+                          AppTheme.gradientLight.withValues(alpha: 0.32),
+                          AppTheme.gradientLight.withValues(alpha: 0.0),
+                        ],
+                        stops: const [0.0, 0.55, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Secondary glow, bottom left, for depth
+                Positioned(
+                  bottom: -90,
+                  left: -90,
+                  child: Container(
+                    width: 240,
+                    height: 240,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          AppTheme.gradientLight.withValues(alpha: 0.4),
-                          AppTheme.gradientLight.withValues(alpha: 0.2),
+                          AppTheme.gradientLight.withValues(alpha: 0.28),
+                          AppTheme.gradientLight.withValues(alpha: 0.12),
                           AppTheme.gradientLight.withValues(alpha: 0.0),
                         ],
                         stops: const [0.0, 0.5, 1.0],
@@ -207,108 +233,110 @@ class _VerifyCodePageState extends State<VerifyCodePage>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                            // Title
-                            Text(
-                              'Insira o Código,',
-                              style: AppTheme.headingMedium.copyWith(
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.12,
-                              ),
-                            ),
-
-                            const SizedBox(height: 9),
-
-                            // Subtitle with email
-                            RichText(
-                              text: TextSpan(
-                                style: AppTheme.bodyMedium.copyWith(
-                                  color: AppTheme.secondaryText,
-                                  fontSize: 14,
-                                  letterSpacing: 0.07,
-                                  height: 1.5,
-                                ),
-                                children: [
-                                  const TextSpan(
-                                    text:
-                                        'Enviamos um código de 6 dígitos para o seu email: ',
-                                  ),
-                                  TextSpan(
-                                    text: _getMaskedEmail(),
-                                    style: const TextStyle(
-                                      color: AppTheme.primaryColor,
+                                  // Title
+                                  Text(
+                                    'Insira o Código,',
+                                    style: AppTheme.headingMedium.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.12,
                                     ),
                                   ),
-                                  const TextSpan(text: '.'),
-                                ],
-                              ),
-                            ),
 
-                            const SizedBox(height: 32),
+                                  const SizedBox(height: 9),
 
-                            // PIN Code Input (6 digits)
-                            SizedBox(
-                              height: 65,
-                              child: PinCodeInput(
-                                length: 6,
-                                onChanged: (code) {
-                                  setState(() => _code = code);
-                                },
-                                onCompleted: (code) {
-                                  setState(() => _code = code);
-                                  // Auto-submit quando completar
-                                  // _verifyCode();
-                                },
-                              ),
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            // Verify button
-                            PrimaryButton(
-                              text: _isLoading ? 'Verificando...' : 'Continuar',
-                              onPressed: _isLoading ? null : _verifyCode,
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Resend code link
-                            Center(
-                              child: RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
-                                  style: AppTheme.bodyMedium.copyWith(
-                                    fontSize: 14,
-                                    letterSpacing: 0.07,
-                                    height: 1.5,
-                                    color: AppTheme.secondaryText,
-                                  ),
-                                  children: [
-                                    const TextSpan(
-                                      text: 'Não recebeu o código? ',
-                                    ),
-                                    TextSpan(
-                                      text: _canResend
-                                          ? 'Reenviar'
-                                          : 'Reenviar em ${_resendTimer}s',
-                                      style: TextStyle(
-                                        color: _canResend
-                                            ? AppTheme.primaryColor
-                                            : AppTheme.secondaryText,
-                                        fontWeight: _canResend
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
+                                  // Subtitle with email
+                                  RichText(
+                                    text: TextSpan(
+                                      style: AppTheme.bodyMedium.copyWith(
+                                        color: AppTheme.secondaryText,
+                                        fontSize: 14,
+                                        letterSpacing: 0.07,
+                                        height: 1.5,
                                       ),
-                                      recognizer: _canResend
-                                          ? (TapGestureRecognizer()
-                                            ..onTap = _resendCode)
-                                          : null,
+                                      children: [
+                                        const TextSpan(
+                                          text:
+                                              'Enviamos um código de 6 dígitos para o seu email: ',
+                                        ),
+                                        TextSpan(
+                                          text: _getMaskedEmail(),
+                                          style: const TextStyle(
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ),
+                                        const TextSpan(text: '.'),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                                  ),
 
-                            const SizedBox(height: 24),
+                                  const SizedBox(height: 32),
+
+                                  // PIN Code Input (6 digits)
+                                  SizedBox(
+                                    height: 65,
+                                    child: PinCodeInput(
+                                      length: 6,
+                                      onChanged: (code) {
+                                        setState(() => _code = code);
+                                      },
+                                      onCompleted: (code) {
+                                        setState(() => _code = code);
+                                        // Auto-submit quando completar
+                                        // _verifyCode();
+                                      },
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 24),
+
+                                  // Verify button
+                                  PrimaryButton(
+                                    text: _isLoading
+                                        ? 'Verificando...'
+                                        : 'Continuar',
+                                    onPressed: _isLoading ? null : _verifyCode,
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Resend code link
+                                  Center(
+                                    child: RichText(
+                                      textAlign: TextAlign.center,
+                                      text: TextSpan(
+                                        style: AppTheme.bodyMedium.copyWith(
+                                          fontSize: 14,
+                                          letterSpacing: 0.07,
+                                          height: 1.5,
+                                          color: AppTheme.secondaryText,
+                                        ),
+                                        children: [
+                                          const TextSpan(
+                                            text: 'Não recebeu o código? ',
+                                          ),
+                                          TextSpan(
+                                            text: _canResend
+                                                ? 'Reenviar'
+                                                : 'Reenviar em ${_resendTimer}s',
+                                            style: TextStyle(
+                                              color: _canResend
+                                                  ? AppTheme.primaryColor
+                                                  : AppTheme.secondaryText,
+                                              fontWeight: _canResend
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
+                                            ),
+                                            recognizer: _canResend
+                                                ? (TapGestureRecognizer()
+                                                  ..onTap = _resendCode)
+                                                : null,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 24),
                                 ],
                               ),
                             ),

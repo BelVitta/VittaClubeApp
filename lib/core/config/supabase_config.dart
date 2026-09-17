@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_config.dart';
+import 'secure_local_storage.dart';
 
 /// Inicializa e fornece acesso ao Supabase client.
 /// Só inicializa em staging/prod (onde useSupabase == true).
@@ -14,6 +15,9 @@ class SupabaseConfig {
     await Supabase.initialize(
       url: config.supabaseUrl,
       anonKey: config.supabaseAnonKey,
+      authOptions: FlutterAuthClientOptions(
+        localStorage: SecureSupabaseLocalStorage(),
+      ),
     );
     _client = Supabase.instance.client;
   }

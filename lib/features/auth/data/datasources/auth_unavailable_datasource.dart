@@ -22,6 +22,7 @@ class AuthUnavailableDataSource implements AuthDataSource {
     required String cpf,
     required String phone,
     required String password,
+    String? receptionistCode,
   }) {
     _logUnavailable('register');
     throw const AuthException(message: _userMessage);
@@ -30,6 +31,38 @@ class AuthUnavailableDataSource implements AuthDataSource {
   @override
   Future<UserModel> signInWithGoogle() {
     _logUnavailable('signInWithGoogle');
+    throw const AuthException(message: _userMessage);
+  }
+
+  @override
+  Future<void> signOutExternalProviders() async {
+    // Sem providers locais quando o Supabase não está inicializado.
+  }
+
+  @override
+  Future<bool> checkCpfAvailable(String cpf) {
+    _logUnavailable('checkCpfAvailable');
+    throw const AuthException(message: _userMessage);
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) {
+    _logUnavailable('changePassword');
+    throw const AuthException(message: _userMessage);
+  }
+
+  @override
+  Future<void> requestPasswordReset({required String email}) {
+    _logUnavailable('requestPasswordReset');
+    throw const AuthException(message: _userMessage);
+  }
+
+  @override
+  Future<void> updatePassword({required String newPassword}) {
+    _logUnavailable('updatePassword');
     throw const AuthException(message: _userMessage);
   }
 

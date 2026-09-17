@@ -23,14 +23,22 @@ class ValidateQrRequested extends QrValidationEvent {
 }
 
 class ValidateMemberQrRequested extends QrValidationEvent {
-  final String userId;
+  /// UUID (QR) ou código curto de 8 dígitos (digitação manual).
+  final String identifier;
   final String actorUserId;
 
   const ValidateMemberQrRequested({
-    required this.userId,
+    required this.identifier,
     required this.actorUserId,
   });
 
+  /// Compat com callers que ainda passam `userId`.
+  factory ValidateMemberQrRequested.fromUserId({
+    required String userId,
+    required String actorUserId,
+  }) =>
+      ValidateMemberQrRequested(identifier: userId, actorUserId: actorUserId);
+
   @override
-  List<Object?> get props => [userId, actorUserId];
+  List<Object?> get props => [identifier, actorUserId];
 }

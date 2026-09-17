@@ -94,5 +94,40 @@ void main() {
       );
       verify(() => authClient.signOut()).called(1);
     });
+
+    test('clearSession chama beforeSignOut antes do signOut', () async {
+      var beforeCalls = 0;
+      sessionManager = AuthSessionManager(
+        sharedPreferences: sharedPreferences,
+        authClient: authClient,
+        beforeSignOut: () async {
+          beforeCalls++;
+        },
+      );
+      await sessionManager.saveSession(user);
+
+      await sessionManager.clearSession();
+
+      expect(beforeCalls, 1);
+      verify(() => authClient.signOut()).called(1);
+    });
+
+    test('clearSession também encerra providers externos (ex.: Google)',
+        () async {
+      var externalSignOutCalls = 0;
+      sessionManager = AuthSessionManager(
+        sharedPreferences: sharedPreferences,
+        authClient: authClient,
+        signOutExternalProviders: () async {
+          externalSignOutCalls++;
+        },
+      );
+      await sessionManager.saveSession(user);
+
+      await sessionManager.clearSession();
+
+      expect(externalSignOutCalls, 1);
+      verify(() => authClient.signOut()).called(1);
+    });
   });
 }

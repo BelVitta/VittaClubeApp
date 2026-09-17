@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
+
+import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/push_notification_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../admin/presentation/pages/admin_dashboard_page.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../financeiro/presentation/pages/financeiro_dashboard_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
+import '../../../profile/presentation/pages/personal_data_page.dart';
 import '../../../parceiro/presentation/pages/parceiro_dashboard_page.dart';
 import '../../../onboarding/presentation/pages/onboarding_page.dart';
 import '../bloc/splash_bloc.dart';
@@ -40,20 +45,49 @@ class SplashView extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const LoginPage()),
           );
         } else if (state is SplashNavigateToAdmin) {
+          unawaited(sl<PushNotificationService>().start());
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
           );
         } else if (state is SplashNavigateToFinanceiro) {
+          unawaited(sl<PushNotificationService>().start());
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const FinanceiroDashboardPage()),
           );
         } else if (state is SplashNavigateToPartner) {
+          unawaited(sl<PushNotificationService>().start());
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const ParceiroDashboardPage()),
           );
         } else if (state is SplashNavigateToHome) {
+          unawaited(sl<PushNotificationService>().start());
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const HomePage()),
+          );
+        } else if (state is SplashNavigateToCompleteProfile) {
+          unawaited(sl<PushNotificationService>().start());
+          final sessionUser = SupabaseConfig.isInitialized
+              ? SupabaseConfig.client.auth.currentUser
+              : null;
+          final meta = sessionUser?.userMetadata;
+          String metaOf(String key) {
+            final v = meta?[key];
+            return v == null ? '' : v.toString().trim();
+          }
+
+          final name = metaOf('full_name').isNotEmpty
+              ? metaOf('full_name')
+              : metaOf('name');
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => PersonalDataPage(
+                requiredCompletion: true,
+                initialName: name,
+                initialEmail: sessionUser?.email ?? metaOf('email'),
+                initialCpf: metaOf('cpf'),
+                initialPhone: metaOf('phone'),
+              ),
+            ),
           );
         }
       },

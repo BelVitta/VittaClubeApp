@@ -169,13 +169,13 @@ class _AdminPlanFormPageState extends State<AdminPlanFormPage> {
               ),
             ),
             const SizedBox(height: 16),
-            // Beneficios
+            // Benefícios
             AdminFormCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Beneficios',
+                    'Benefícios',
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -192,7 +192,7 @@ class _AdminPlanFormPageState extends State<AdminPlanFormPage> {
                         children: [
                           Expanded(
                             child: AdminFormField(
-                              label: 'Beneficio ${index + 1}',
+                              label: 'Benefício ${index + 1}',
                               controller: controller,
                             ),
                           ),
@@ -232,7 +232,7 @@ class _AdminPlanFormPageState extends State<AdminPlanFormPage> {
                       ),
                       child: Center(
                         child: Text(
-                          'Adicionar Beneficio',
+                          'Adicionar benefício',
                           style: GoogleFonts.outfit(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,

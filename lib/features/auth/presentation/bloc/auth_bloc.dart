@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/usecases/check_cpf_available_usecase.dart';
 import '../../domain/usecases/google_signin_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
@@ -9,11 +10,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase loginUseCase;
   final RegisterUseCase registerUseCase;
   final GoogleSignInUseCase googleSignInUseCase;
+  final CheckCpfAvailableUseCase checkCpfAvailableUseCase;
 
   AuthBloc({
     required this.loginUseCase,
     required this.registerUseCase,
     required this.googleSignInUseCase,
+    required this.checkCpfAvailableUseCase,
   }) : super(const AuthState()) {
     on<NameChanged>(_onNameChanged);
     on<CpfChanged>(_onCpfChanged);
@@ -21,6 +24,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<EmailChanged>(_onEmailChanged);
     on<PasswordChanged>(_onPasswordChanged);
     on<ConfirmPasswordChanged>(_onConfirmPasswordChanged);
+    on<ReceptionistCodeChanged>(_onReceptionistCodeChanged);
     on<TogglePasswordVisibility>(_onTogglePasswordVisibility);
     on<ToggleConfirmPasswordVisibility>(_onToggleConfirmPasswordVisibility);
     on<RegisterSubmitted>(_onRegisterSubmitted);
@@ -44,6 +48,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(state.copyWith(
       email: event.email,
       status: state.status == AuthStatus.failure ? AuthStatus.initial : null,
+      errorSource: AuthErrorSource.none,
+      errorMessage: null,
     ));
   }
 
@@ -51,6 +57,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(state.copyWith(
       password: event.password,
       status: state.status == AuthStatus.failure ? AuthStatus.initial : null,
+      errorSource: AuthErrorSource.none,
+      errorMessage: null,
     ));
   }
 
@@ -59,6 +67,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) {
     emit(state.copyWith(confirmPassword: event.confirmPassword));
+  }
+
+  void _onReceptionistCodeChanged(
+    ReceptionistCodeChanged event,
+    Emitter<AuthState> emit,
+  ) {
+    emit(state.copyWith(receptionistCode: event.receptionistCode));
   }
 
   void _onTogglePasswordVisibility(
@@ -85,12 +100,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(state.copyWith(
         showFieldErrors: true,
         status: AuthStatus.failure,
+        errorSource: AuthErrorSource.register,
         errorMessage: 'Por favor, preencha todos os campos corretamente.',
       ));
       return;
     }
 
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(
+      status: AuthStatus.loading,
+      errorSource: AuthErrorSource.none,
+      errorMessage: null,
+    ));
+
+    final cpfCheck = await checkCpfAvailableUseCase(state.cpf);
+    final cpfTaken = cpfCheck.fold((_) => false, (available) => !available);
+    if (cpfTaken) {
+      emit(state.copyWith(
+        status: AuthStatus.failure,
+        showFieldErrors: false,
+        errorSource: AuthErrorSource.register,
+        errorMessage: 'Este CPF já está cadastrado.',
+      ));
+      return;
+    }
 
     final result = await registerUseCase(
       name: state.name,
@@ -98,15 +130,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       cpf: state.cpf,
       phone: state.phone,
       password: state.password,
+      receptionistCode:
+          state.receptionistCode.isEmpty ? null : state.receptionistCode,
     );
 
     result.fold(
       (failure) => emit(state.copyWith(
         status: AuthStatus.failure,
+        errorSource: AuthErrorSource.register,
         errorMessage: failure.message,
       )),
       (user) => emit(state.copyWith(
         status: AuthStatus.success,
+        errorSource: AuthErrorSource.none,
         user: user,
       )),
     );
@@ -120,12 +156,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(state.copyWith(
         showFieldErrors: true,
         status: AuthStatus.failure,
+        errorSource: AuthErrorSource.credentials,
         errorMessage: 'Por favor, preencha todos os campos corretamente.',
       ));
       return;
     }
 
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(
+      status: AuthStatus.loading,
+      errorSource: AuthErrorSource.none,
+      errorMessage: null,
+    ));
 
     final result = await loginUseCase(
       email: state.email,
@@ -135,10 +176,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     result.fold(
       (failure) => emit(state.copyWith(
         status: AuthStatus.failure,
+        errorSource: AuthErrorSource.credentials,
         errorMessage: failure.message,
       )),
       (user) => emit(state.copyWith(
         status: AuthStatus.success,
+        errorSource: AuthErrorSource.none,
         user: user,
       )),
     );
@@ -148,17 +191,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     GoogleSignInPressed event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(
+      status: AuthStatus.loading,
+      errorSource: AuthErrorSource.none,
+      errorMessage: null,
+      showFieldErrors: false,
+    ));
 
     final result = await googleSignInUseCase();
 
     result.fold(
       (failure) => emit(state.copyWith(
         status: AuthStatus.failure,
+        errorSource: AuthErrorSource.social,
         errorMessage: failure.message,
       )),
       (user) => emit(state.copyWith(
         status: AuthStatus.success,
+        errorSource: AuthErrorSource.none,
         user: user,
       )),
     );

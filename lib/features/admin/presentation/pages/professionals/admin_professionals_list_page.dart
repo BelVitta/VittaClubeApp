@@ -52,7 +52,7 @@ class _ProfessionalsListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Profissional excluido com sucesso!',
+                'Profissional excluído com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -62,7 +62,7 @@ class _ProfessionalsListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                state.errorMessage ?? 'Erro ao processar operacao.',
+                state.errorMessage ?? 'Erro ao processar operação.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.errorColor,
@@ -78,7 +78,9 @@ class _ProfessionalsListView extends StatelessWidget {
             children: [
               AdminSearchBar(
                 onChanged: (query) {
-                  context.read<ProfessionalBloc>().add(SearchProfessionals(query));
+                  context
+                      .read<ProfessionalBloc>()
+                      .add(SearchProfessionals(query));
                 },
               ),
               const SizedBox(height: 12),
@@ -104,8 +106,9 @@ class _ProfessionalsListView extends StatelessWidget {
                               options: state.availableSpecialties,
                               current: state.filterSpecialty,
                               onSelected: (value) {
-                                context.read<ProfessionalBloc>().add(
-                                    FilterProfessionalsBySpecialty(value));
+                                context
+                                    .read<ProfessionalBloc>()
+                                    .add(FilterProfessionalsBySpecialty(value));
                               },
                             );
                           },
@@ -124,11 +127,14 @@ class _ProfessionalsListView extends StatelessWidget {
                               options: ['ativo', 'inativo'],
                               current: state.filterIsActive == null
                                   ? null
-                                  : (state.filterIsActive! ? 'ativo' : 'inativo'),
+                                  : (state.filterIsActive!
+                                      ? 'ativo'
+                                      : 'inativo'),
                               onSelected: (value) {
                                 context.read<ProfessionalBloc>().add(
-                                    FilterProfessionalsByStatus(
-                                        value == null ? null : value == 'ativo'));
+                                    FilterProfessionalsByStatus(value == null
+                                        ? null
+                                        : value == 'ativo'));
                               },
                             );
                           },
@@ -169,7 +175,7 @@ class _ProfessionalsListView extends StatelessWidget {
                       icon: Icons.medical_services_outlined,
                       message: 'Nenhum profissional encontrado',
                       subtitle:
-                          'Toque no botao + para cadastrar um novo profissional.',
+                          'Toque no botão + para cadastrar um novo profissional.',
                     );
                   }
 
@@ -180,10 +186,15 @@ class _ProfessionalsListView extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final professional = state.filteredItems[index];
+                      final availability =
+                          professional.availabilityNote?.trim().isNotEmpty ==
+                                  true
+                              ? professional.availabilityNote!.trim()
+                              : professional.availableDays;
                       return AdminListItem(
                         title: professional.name,
                         subtitle:
-                            '${professional.specialtyName} - ${professional.availableDays}',
+                            '${professional.specialtyName} - $availability',
                         leading: AdminStatusBadge(
                           status: professional.isActive ? 'ativo' : 'inativo',
                         ),
@@ -201,7 +212,9 @@ class _ProfessionalsListView extends StatelessWidget {
                             ),
                           ).then((result) {
                             if (result == true && context.mounted) {
-                              context.read<ProfessionalBloc>().add(LoadProfessionals());
+                              context
+                                  .read<ProfessionalBloc>()
+                                  .add(LoadProfessionals());
                             }
                           });
                         },
@@ -211,9 +224,8 @@ class _ProfessionalsListView extends StatelessWidget {
                             professional.name,
                           );
                           if (confirmed == true && context.mounted) {
-                            context
-                                .read<ProfessionalBloc>()
-                                .add(DeleteProfessionalRequested(professional.id));
+                            context.read<ProfessionalBloc>().add(
+                                DeleteProfessionalRequested(professional.id));
                           }
                         },
                       );

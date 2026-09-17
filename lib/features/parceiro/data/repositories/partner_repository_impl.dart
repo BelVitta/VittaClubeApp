@@ -24,7 +24,20 @@ class PartnerRepositoryImpl implements PartnerRepository {
   }
 
   @override
-  Future<Either<Failure, PartnerEntity>> getByProfileId(String profileId) async {
+  Future<Either<Failure, List<PartnerEntity>>> getAllForFinanceiro() async {
+    try {
+      final result = await dataSource.getAllPartners();
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure('Erro inesperado: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, PartnerEntity>> getByProfileId(
+      String profileId) async {
     try {
       final result = await dataSource.getPartnerByProfileId(profileId);
       return Right(result);
@@ -48,7 +61,8 @@ class PartnerRepositoryImpl implements PartnerRepository {
   }
 
   @override
-  Future<Either<Failure, PartnerEntity>> regenerateCode(String partnerId) async {
+  Future<Either<Failure, PartnerEntity>> regenerateCode(
+      String partnerId) async {
     try {
       final result = await dataSource.regenerateCode(partnerId);
       return Right(result);

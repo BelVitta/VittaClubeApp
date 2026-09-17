@@ -146,14 +146,14 @@ class _AdminCouponFormPageState extends State<AdminCouponFormPage> {
             children: [
               // Codigo
               AdminFormField(
-                label: 'Codigo',
+                label: 'Código',
                 controller: _codeController,
               ),
               const SizedBox(height: 16),
 
               // Descricao
               AdminFormField(
-                label: 'Descricao',
+                label: 'Descrição',
                 controller: _descriptionController,
               ),
               const SizedBox(height: 16),
@@ -171,7 +171,7 @@ class _AdminCouponFormPageState extends State<AdminCouponFormPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Data de Expiracao',
+                    'Data de expiração',
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,

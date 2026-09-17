@@ -35,7 +35,15 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       if (session != null &&
           hasValidLocalSession &&
           !_isSessionExpired(session)) {
+        // Recovery: se handle_new_user falhou no signup, recria o perfil.
+        try {
+          await SupabaseConfig.client.rpc('ensure_own_profile');
+        } catch (_) {}
         final role = await _fetchRole(session.user.id);
+        if (!await _hasCompleteProfile(session.user.id)) {
+          emit(SplashNavigateToCompleteProfile());
+          return;
+        }
         emit(_stateForRole(role));
         return;
       }
@@ -79,6 +87,22 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       return data?['role'] as String? ?? 'user';
     } catch (_) {
       return 'user';
+    }
+  }
+
+  Future<bool> _hasCompleteProfile(String userId) async {
+    try {
+      final rows = await SupabaseConfig.client.rpc(
+        'get_user_sensitive_profile',
+        params: {'p_user_id': userId},
+      ) as List;
+      if (rows.isEmpty) return false;
+      final row = Map<String, dynamic>.from(rows.first as Map);
+      final cpf = row['cpf'] as String? ?? '';
+      final phone = row['phone'] as String? ?? '';
+      return cpf.isNotEmpty && phone.isNotEmpty;
+    } catch (_) {
+      return false;
     }
   }
 

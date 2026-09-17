@@ -117,7 +117,7 @@ class _BadgesListView extends StatelessWidget {
                       return AdminListItem(
                         title: badge.displayName,
                         subtitle:
-                            '${badge.discountPercentage.toStringAsFixed(0)}% desconto - ${badge.maxConsultationsPerMonth} consultas/mes',
+                            '${badge.discountPercentage.toStringAsFixed(0)}% desconto - ${badge.maxConsultationsPerMonth} consultas/mês',
                         onEdit: () {
                           final bloc = context.read<BadgeBloc>();
                           Navigator.push(

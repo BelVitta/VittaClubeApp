@@ -8,12 +8,14 @@ import '../../../../core/theme/app_theme.dart';
 /// barato, e leva direto para o pagamento.
 class NoPlanCard extends StatelessWidget {
   final VoidCallback onTap;
+  final VoidCallback? onClose;
 
   /// Preço formatado do plano mais barato (ex: "R\$ 49,90/mês"). `null`
   /// enquanto os planos ainda estão carregando.
   final String? priceLabel;
 
-  const NoPlanCard({super.key, required this.onTap, this.priceLabel});
+  const NoPlanCard(
+      {super.key, required this.onTap, this.onClose, this.priceLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,7 @@ class NoPlanCard extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
           child: Row(
             children: [
               Container(
@@ -63,7 +65,7 @@ class NoPlanCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Comece sua jornada Vita',
+                      'Faça parte do Vita Clube',
                       style: GoogleFonts.outfit(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -73,7 +75,7 @@ class NoPlanCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Consultas ilimitadas, descontos em parceiros e sorteios mensais.',
+                      'Tenha acesso a benefícios exclusivos por um único valor mensal.',
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
@@ -84,7 +86,7 @@ class NoPlanCard extends StatelessWidget {
                     if (priceLabel != null) ...[
                       const SizedBox(height: 10),
                       Text(
-                        'A partir de $priceLabel',
+                        'Plano completo por apenas $priceLabel',
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -116,6 +118,15 @@ class NoPlanCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onClose != null)
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: IconButton(
+                    onPressed: onClose,
+                    tooltip: 'Fechar',
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                  ),
+                ),
             ],
           ),
         ),

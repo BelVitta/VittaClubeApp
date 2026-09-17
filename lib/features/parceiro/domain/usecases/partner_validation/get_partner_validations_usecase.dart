@@ -8,6 +8,7 @@ class GetPartnerValidationsUseCase {
 
   GetPartnerValidationsUseCase(this.repository);
 
-  Future<Either<Failure, List<PartnerValidationEntity>>> call(String partnerId) =>
+  Future<Either<Failure, List<PartnerValidationEntity>>> call(
+          String partnerId) =>
       repository.getByPartnerId(partnerId);
 }

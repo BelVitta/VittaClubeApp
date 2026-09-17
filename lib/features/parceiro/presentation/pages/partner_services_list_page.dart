@@ -22,7 +22,8 @@ class PartnerServicesListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<PartnerServiceBloc>()..add(LoadPartnerServices(partnerId)),
+      create: (_) =>
+          sl<PartnerServiceBloc>()..add(LoadPartnerServices(partnerId)),
       child: _PartnerServicesListView(partnerId: partnerId),
     );
   }
@@ -45,7 +46,7 @@ class _PartnerServicesListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Servico salvo com sucesso!',
+                'Serviço salvo com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -55,7 +56,7 @@ class _PartnerServicesListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Servico excluido com sucesso!',
+                'Serviço excluído com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -65,7 +66,7 @@ class _PartnerServicesListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                state.errorMessage ?? 'Erro ao processar operacao.',
+                state.errorMessage ?? 'Erro ao processar operação.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.errorColor,
@@ -76,12 +77,14 @@ class _PartnerServicesListView extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: AdminPageScaffold(
-          title: 'Servicos',
+          title: 'Serviços',
           body: Column(
             children: [
               AdminSearchBar(
                 onChanged: (query) {
-                  context.read<PartnerServiceBloc>().add(SearchPartnerServices(query));
+                  context
+                      .read<PartnerServiceBloc>()
+                      .add(SearchPartnerServices(query));
                 },
               ),
               const SizedBox(height: 16),
@@ -102,8 +105,9 @@ class _PartnerServicesListView extends StatelessWidget {
                       state.status == PartnerServiceStatus.loaded) {
                     return const AdminEmptyState(
                       icon: Icons.medical_services_outlined,
-                      message: 'Nenhum servico encontrado',
-                      subtitle: 'Toque no botao + para cadastrar um novo servico.',
+                      message: 'Nenhum serviço encontrado',
+                      subtitle:
+                          'Toque no botão + para cadastrar um novo serviço.',
                     );
                   }
 
@@ -116,7 +120,8 @@ class _PartnerServicesListView extends StatelessWidget {
                       final service = state.filteredItems[index];
                       return AdminListItem(
                         title: service.name,
-                        subtitle: 'R\$ ${service.originalPrice.toStringAsFixed(2)} → R\$ ${service.discountedPrice.toStringAsFixed(2)}',
+                        subtitle:
+                            'R\$ ${service.originalPrice.toStringAsFixed(2)} → R\$ ${service.discountedPrice.toStringAsFixed(2)}',
                         leading: AdminStatusBadge(
                           status: service.isActive ? 'ativo' : 'inativo',
                         ),
@@ -177,7 +182,9 @@ class _PartnerServicesListView extends StatelessWidget {
               ),
             ).then((result) {
               if (result == true && context.mounted) {
-                context.read<PartnerServiceBloc>().add(LoadPartnerServices(partnerId));
+                context
+                    .read<PartnerServiceBloc>()
+                    .add(LoadPartnerServices(partnerId));
               }
             });
           },

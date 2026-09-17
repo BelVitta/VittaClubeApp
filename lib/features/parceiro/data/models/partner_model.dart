@@ -11,20 +11,28 @@ class PartnerModel extends PartnerEntity {
     required super.phone,
     required super.logoUrl,
     required super.isActive,
+    super.discountPercentage,
   });
 
   factory PartnerModel.fromJson(Map<String, dynamic> json) {
     return PartnerModel(
       id: json['id'] as String,
-      profileId: json['profileId'] as String,
+      profileId: (json['profileId'] ?? json['profile_id']) as String,
       name: json['name'] as String,
       category: json['category'] as String,
       code: json['code'] as String,
       address: json['address'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
-      logoUrl: json['logoUrl'] as String? ?? '',
-      isActive: json['isActive'] as bool? ?? true,
+      logoUrl: (json['logoUrl'] ?? json['logo_url']) as String? ?? '',
+      isActive: (json['isActive'] ?? json['is_active']) as bool? ?? true,
+      discountPercentage:
+          _percent(json['discountPercentage'] ?? json['discount_percentage']),
     );
+  }
+
+  static double _percent(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value') ?? 0;
   }
 
   Map<String, dynamic> toJson() {
@@ -38,6 +46,7 @@ class PartnerModel extends PartnerEntity {
       'phone': phone,
       'logoUrl': logoUrl,
       'isActive': isActive,
+      'discountPercentage': discountPercentage,
     };
   }
 
@@ -52,6 +61,7 @@ class PartnerModel extends PartnerEntity {
       phone: entity.phone,
       logoUrl: entity.logoUrl,
       isActive: entity.isActive,
+      discountPercentage: entity.discountPercentage,
     );
   }
 }

@@ -17,6 +17,10 @@ class UserAdminEntity extends Equatable {
   final int totalReferralCount;
   final String role;
 
+  /// Código único da recepcionista, gerado automaticamente quando
+  /// role = 'admin'. Nulo para os outros papéis.
+  final String? receptionistCode;
+
   const UserAdminEntity({
     required this.id,
     required this.name,
@@ -31,6 +35,7 @@ class UserAdminEntity extends Equatable {
     this.consultationCountThisMonth = 0,
     this.totalReferralCount = 0,
     this.role = 'user',
+    this.receptionistCode,
   });
 
   @override
@@ -48,5 +53,6 @@ class UserAdminEntity extends Equatable {
         consultationCountThisMonth,
         totalReferralCount,
         role,
+        receptionistCode,
       ];
 }

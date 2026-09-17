@@ -9,9 +9,10 @@ class ClinicSettingsService {
   static const String kDefaultWhatsapp = 'default_whatsapp';
   static const String kMaxDependentsPerHolder = 'max_dependents_per_holder';
   static const String kMonthlyUsesPerDependent = 'monthly_uses_per_dependent';
+  static const String kQrSigningSecret = 'dependents_qr_signing_secret';
 
   static const int defaultMaxDependentsPerHolder = 2;
-  static const int defaultMonthlyUsesPerDependent = 3;
+  static const int defaultMonthlyUsesPerDependent = 1;
 
   final Map<String, String> _cache = {};
   bool _loaded = false;
@@ -52,6 +53,16 @@ class ClinicSettingsService {
   /// Salva os usos mensais por dependente.
   Future<void> setMonthlyUsesPerDependent(int uses) =>
       set(kMonthlyUsesPerDependent, uses.toString());
+
+  /// Segredo usado para assinar o QR de agendamento de dependentes
+  /// (`QrTokenService`). Gerado e semeado via migration; o fallback aqui só
+  /// evita crash caso a linha nunca tenha sido criada.
+  Future<String> getQrSigningSecret() async {
+    final value = await get(kQrSigningSecret);
+    return (value == null || value.isEmpty)
+        ? 'vita-clube-dependents-qr-fallback-secret'
+        : value;
+  }
 
   /// Pré-popula o cache em memória sem bater no Supabase. Usado em testes.
   void seedCacheForTesting(Map<String, String> values) {

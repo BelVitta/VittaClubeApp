@@ -12,6 +12,7 @@ import '../../widgets/admin_list_item.dart';
 import '../../widgets/admin_status_badge.dart';
 import '../../widgets/admin_empty_state.dart';
 import '../../widgets/admin_delete_dialog.dart';
+import '../../widgets/admin_filter_chip.dart';
 import 'admin_payment_detail_page.dart';
 
 class AdminPaymentsListPage extends StatelessWidget {
@@ -73,7 +74,7 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Pagamento excluido com sucesso!',
+                'Pagamento excluído com sucesso!',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -83,7 +84,7 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                state.errorMessage ?? 'Erro ao processar operacao.',
+                state.errorMessage ?? 'Erro ao processar operação.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.errorColor,
@@ -100,9 +101,7 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
               // Barra de pesquisa
               AdminSearchBar(
                 onChanged: (query) {
-                  context
-                      .read<PaymentAdminBloc>()
-                      .add(SearchPayments(query));
+                  context.read<PaymentAdminBloc>().add(SearchPayments(query));
                 },
               ),
               const SizedBox(height: 12),
@@ -120,7 +119,7 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
                     const SizedBox(width: 8),
                     _buildFilterChip(
                       icon: Icons.payment_outlined,
-                      label: _filterMethod ?? 'Metodo',
+                      label: _filterMethod ?? 'Método',
                       isActive: _filterMethod != null,
                       onTap: () => _showMethodFilter(context),
                     ),
@@ -163,8 +162,7 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
                     return const AdminEmptyState(
                       icon: Icons.payment_outlined,
                       message: 'Nenhum pagamento encontrado',
-                      subtitle:
-                          'Os pagamentos realizados aparecerao aqui.',
+                      subtitle: 'Os pagamentos realizados aparecerão aqui.',
                     );
                   }
 
@@ -222,7 +220,7 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
   }
 
   void _showStatusFilter(BuildContext context) {
-    _showFilterBottomSheet(
+    AdminFilterChip.showFilterBottomSheet(
       context,
       title: 'Filtrar por Status',
       options: _statusOptions,
@@ -234,89 +232,13 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
   }
 
   void _showMethodFilter(BuildContext context) {
-    _showFilterBottomSheet(
+    AdminFilterChip.showFilterBottomSheet(
       context,
-      title: 'Filtrar por Metodo',
+      title: 'Filtrar por método',
       options: _methodOptions,
       current: _filterMethod,
       onSelected: (value) {
         setState(() => _filterMethod = value);
-      },
-    );
-  }
-
-  void _showFilterBottomSheet(
-    BuildContext context, {
-    required String title,
-    required List<String> options,
-    required String? current,
-    required ValueChanged<String?> onSelected,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (bottomContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Text(
-                  title,
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-              ),
-              if (current != null)
-                ListTile(
-                  leading: const Icon(Icons.clear, color: Colors.red, size: 20),
-                  title: Text(
-                    'Remover filtro',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14, color: Colors.red),
-                  ),
-                  onTap: () {
-                    onSelected(null);
-                    Navigator.pop(bottomContext);
-                  },
-                ),
-              ...options.map((option) => ListTile(
-                    leading: Icon(
-                      current == option
-                          ? Icons.check_circle
-                          : Icons.circle_outlined,
-                      color: current == option
-                          ? AppTheme.primaryColor
-                          : const Color(0xFF6D7F95),
-                      size: 20,
-                    ),
-                    title: Text(
-                      option[0].toUpperCase() + option.substring(1),
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: current == option
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    onTap: () {
-                      onSelected(option);
-                      Navigator.pop(bottomContext);
-                    },
-                  )),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
       },
     );
   }
@@ -345,15 +267,18 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14,
-                color: isActive ? AppTheme.primaryColor : const Color(0xFF6D7F95)),
+            Icon(icon,
+                size: 14,
+                color:
+                    isActive ? AppTheme.primaryColor : const Color(0xFF6D7F95)),
             const SizedBox(width: 6),
             Text(
               label[0].toUpperCase() + label.substring(1),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive ? AppTheme.primaryColor : const Color(0xFF6D7F95),
+                color:
+                    isActive ? AppTheme.primaryColor : const Color(0xFF6D7F95),
               ),
             ),
           ],

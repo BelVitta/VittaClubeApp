@@ -1,22 +1,28 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'core/config/app_config.dart';
 import 'core/config/supabase_config.dart';
 import 'core/di/injection_container.dart' as di;
+import 'core/navigation/app_navigator.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/presentation/widgets/password_recovery_listener.dart';
 import 'features/splash/presentation/pages/splash_page.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('pt_BR');
 
   AppConfig.initStaging();
 
-  // Firebase: apenas para Google Sign-In
+  // Firebase: Google Sign-In + FCM
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  installPushBackgroundHandler();
 
   // Supabase: banco real (projeto staging)
   await SupabaseConfig.initialize();
@@ -36,19 +42,22 @@ class VitaClubeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppConfig.instance.appName,
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        return Banner(
-          message: 'STG',
-          location: BannerLocation.topStart,
-          color: Colors.orange,
-          child: child!,
-        );
-      },
-      theme: AppTheme.lightTheme,
-      home: const SplashPage(),
+    return PasswordRecoveryListener(
+      child: MaterialApp(
+        title: AppConfig.instance.appName,
+        debugShowCheckedModeBanner: false,
+        navigatorKey: AppNavigator.key,
+        builder: (context, child) {
+          return Banner(
+            message: 'STG',
+            location: BannerLocation.topStart,
+            color: Colors.orange,
+            child: child!,
+          );
+        },
+        theme: AppTheme.lightTheme,
+        home: const SplashPage(),
+      ),
     );
   }
 }

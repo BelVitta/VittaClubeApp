@@ -30,6 +30,7 @@ class DependentsBloc extends Bloc<DependentsEvent, DependentsState> {
       GetDependentsParams(
         holderUserId: event.holderUserId,
         cycleReference: event.cycleReference,
+        status: event.status,
       ),
     );
     result.fold(

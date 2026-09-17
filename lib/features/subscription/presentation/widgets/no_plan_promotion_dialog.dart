@@ -5,15 +5,44 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/secondary_button.dart';
 
+/// Modal promocional exibido na frente do app quando o usuário não tem
+/// assinatura. Complementa o [NoPlanCard] permanente no topo da Home.
 class NoPlanPromotionDialog extends StatelessWidget {
   final VoidCallback onViewPlans;
   final VoidCallback onDismiss;
+
+  /// Preço formatado do plano mais barato (ex: "R\$ 49,90/mês").
+  final String? priceLabel;
 
   const NoPlanPromotionDialog({
     super.key,
     required this.onViewPlans,
     required this.onDismiss,
+    this.priceLabel,
   });
+
+  /// Exibe o dialog com barrier não-dismissível (fecha só por X / "Agora não").
+  static Future<void> show(
+    BuildContext context, {
+    required VoidCallback onViewPlans,
+    String? priceLabel,
+  }) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (dialogContext) {
+        return NoPlanPromotionDialog(
+          priceLabel: priceLabel,
+          onViewPlans: () {
+            Navigator.of(dialogContext).pop();
+            onViewPlans();
+          },
+          onDismiss: () => Navigator.of(dialogContext).pop(),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +68,7 @@ class NoPlanPromotionDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Header(onDismiss: onDismiss),
+            _Header(onDismiss: onDismiss, priceLabel: priceLabel),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
               child: Column(
@@ -73,6 +102,11 @@ class NoPlanPromotionDialog extends StatelessWidget {
                     icon: Icons.workspace_premium_outlined,
                     text: 'Benefícios e parceiros em um só lugar',
                   ),
+                  const SizedBox(height: 10),
+                  const _BenefitRow(
+                    icon: Icons.verified_user_outlined,
+                    text: 'Carteirinha digital sempre no bolso',
+                  ),
                   const SizedBox(height: 18),
                   PrimaryButton(
                     text: 'Conhecer planos',
@@ -95,8 +129,9 @@ class NoPlanPromotionDialog extends StatelessWidget {
 
 class _Header extends StatelessWidget {
   final VoidCallback onDismiss;
+  final String? priceLabel;
 
-  const _Header({required this.onDismiss});
+  const _Header({required this.onDismiss, this.priceLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -146,9 +181,9 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'R\$ 34,90/mês',
+                  priceLabel ?? 'Planos a partir de um valor mensal',
                   style: GoogleFonts.outfit(
-                    fontSize: 24,
+                    fontSize: priceLabel != null ? 22 : 16,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),

@@ -7,9 +7,14 @@ class PartnerValidationEntity extends Equatable {
   final String userName;
   final String userBadgeLevel;
   final double discountApplied;
-  final String serviceId;
+  final String? serviceId;
   final String serviceName;
   final DateTime validatedAt;
+  final double? discountPercentage;
+  final double? originalValue;
+  final double savingsAmount;
+  final String? beneficiaryType;
+  final String? dependentId;
 
   const PartnerValidationEntity({
     required this.id,
@@ -18,9 +23,14 @@ class PartnerValidationEntity extends Equatable {
     required this.userName,
     required this.userBadgeLevel,
     required this.discountApplied,
-    required this.serviceId,
+    this.serviceId,
     required this.serviceName,
     required this.validatedAt,
+    this.discountPercentage,
+    this.originalValue,
+    this.savingsAmount = 0,
+    this.beneficiaryType,
+    this.dependentId,
   });
 
   @override
@@ -34,5 +44,10 @@ class PartnerValidationEntity extends Equatable {
         serviceId,
         serviceName,
         validatedAt,
+        discountPercentage,
+        originalValue,
+        savingsAmount,
+        beneficiaryType,
+        dependentId,
       ];
 }

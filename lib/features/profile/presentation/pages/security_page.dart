@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../auth/domain/usecases/change_password_usecase.dart';
 
-/// Página de Segurança - alteração de senha
+/// Página de Segurança — alteração de senha real via Supabase.
 class SecurityPage extends StatefulWidget {
   const SecurityPage({super.key});
 
@@ -19,6 +22,9 @@ class _SecurityPageState extends State<SecurityPage> {
   bool _obscureCurrent = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
+  bool _loading = false;
+  String? _errorMessage;
+  String? _successMessage;
 
   @override
   void dispose() {
@@ -28,18 +34,39 @@ class _SecurityPageState extends State<SecurityPage> {
     super.dispose();
   }
 
-  void _handleChangePassword() {
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('As senhas não coincidem.')),
-      );
-      return;
-    }
-    // TODO: Process password change
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Senha alterada com sucesso!')),
+  Future<void> _handleChangePassword() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _errorMessage = null;
+      _successMessage = null;
+      _loading = true;
+    });
+
+    final result = await sl<ChangePasswordUseCase>()(
+      currentPassword: _currentPasswordController.text,
+      newPassword: _newPasswordController.text,
+      confirmPassword: _confirmPasswordController.text,
     );
-    Navigator.pop(context);
+
+    if (!mounted) return;
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _loading = false;
+          _errorMessage = failure.message;
+        });
+      },
+      (_) {
+        setState(() {
+          _loading = false;
+          _successMessage = 'Senha alterada com sucesso.';
+          _currentPasswordController.clear();
+          _newPasswordController.clear();
+          _confirmPasswordController.clear();
+        });
+      },
+    );
   }
 
   @override
@@ -49,7 +76,6 @@ class _SecurityPageState extends State<SecurityPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Background gradient circle
             Positioned(
               top: -16,
               right: -180,
@@ -68,10 +94,8 @@ class _SecurityPageState extends State<SecurityPage> {
                 ),
               ),
             ),
-
             Column(
               children: [
-                // Back button
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Row(
@@ -96,17 +120,13 @@ class _SecurityPageState extends State<SecurityPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
-                // Content
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title
                         Text(
                           'Segurança',
                           style: GoogleFonts.outfit(
@@ -117,7 +137,6 @@ class _SecurityPageState extends State<SecurityPage> {
                           ),
                         ),
                         const SizedBox(height: 6),
-
                         Text(
                           'Alterar Senha',
                           style: GoogleFonts.outfit(
@@ -128,16 +147,22 @@ class _SecurityPageState extends State<SecurityPage> {
                           ),
                         ),
                         const SizedBox(height: 6),
-
-                        // Password form
+                        Text(
+                          'Use a senha atual da conta (login com e-mail). Contas só Google devem redefinir pelo Google.',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            height: 1.35,
+                            color: AppTheme.secondaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color: const Color(0xFFEBEEF2)),
+                            border: Border.all(color: const Color(0xFFEBEEF2)),
                           ),
                           child: Column(
                             children: [
@@ -153,8 +178,8 @@ class _SecurityPageState extends State<SecurityPage> {
                                 label: 'Nova Senha',
                                 controller: _newPasswordController,
                                 obscure: _obscureNew,
-                                onToggle: () => setState(
-                                    () => _obscureNew = !_obscureNew),
+                                onToggle: () =>
+                                    setState(() => _obscureNew = !_obscureNew),
                               ),
                               const SizedBox(height: 6),
                               _buildPasswordField(
@@ -167,13 +192,25 @@ class _SecurityPageState extends State<SecurityPage> {
                             ],
                           ),
                         ),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 12),
+                          _FeedbackBanner(
+                            message: _errorMessage!,
+                            isError: true,
+                          ),
+                        ],
+                        if (_successMessage != null) ...[
+                          const SizedBox(height: 12),
+                          _FeedbackBanner(
+                            message: _successMessage!,
+                            isError: false,
+                          ),
+                        ],
                         const SizedBox(height: 12),
-
                         PrimaryButton(
-                          text: 'Alterar Senha',
-                          onPressed: _handleChangePassword,
+                          text: _loading ? 'Salvando...' : 'Alterar Senha',
+                          onPressed: _loading ? null : _handleChangePassword,
                         ),
-
                         const SizedBox(height: 32),
                       ],
                     ),
@@ -214,6 +251,7 @@ class _SecurityPageState extends State<SecurityPage> {
           child: TextField(
             controller: controller,
             obscureText: obscure,
+            enabled: !_loading,
             style: GoogleFonts.outfit(
               fontSize: 13,
               fontWeight: FontWeight.w400,
@@ -228,7 +266,9 @@ class _SecurityPageState extends State<SecurityPage> {
               suffixIcon: GestureDetector(
                 onTap: onToggle,
                 child: Icon(
-                  obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  obscure
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   size: 18,
                   color: const Color(0xFF6D7F95),
                 ),
@@ -237,6 +277,52 @@ class _SecurityPageState extends State<SecurityPage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FeedbackBanner extends StatelessWidget {
+  final String message;
+  final bool isError;
+
+  const _FeedbackBanner({
+    required this.message,
+    required this.isError,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isError ? AppTheme.errorColor : AppTheme.successColor;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isError ? Icons.error_outline : Icons.check_circle_outline,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                height: 1.35,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -6,6 +6,7 @@ class ProfessionalModel extends ProfessionalEntity {
     required super.name,
     required super.specialtyName,
     required super.availableDays,
+    super.availabilityNote,
     super.avatarUrl,
     required super.avatarBgColor,
   });
@@ -23,6 +24,7 @@ class ProfessionalModel extends ProfessionalEntity {
       name: json['name'] as String,
       specialtyName: specialty?['name'] as String? ?? '',
       availableDays: days,
+      availabilityNote: json['availability_note'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       avatarBgColor: json['avatar_bg_color'] as int? ?? 0xFFFFCD66,
     );

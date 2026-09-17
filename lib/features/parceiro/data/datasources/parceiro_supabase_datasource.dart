@@ -2,8 +2,10 @@ import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/rate_limit.dart';
 import '../../domain/entities/partner_entity.dart';
 import '../../domain/entities/partner_service_entity.dart';
+import '../models/partner_application_model.dart';
 import '../models/partner_model.dart';
 import '../models/partner_service_model.dart';
 import '../models/partner_validation_model.dart';
@@ -24,7 +26,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
     try {
       final data = await _supabase
           .from('partners')
-          .select('id, profile_id, name, category, code, address, logo_url, is_active')
+          .select(
+              'id, profile_id, name, category, code, address, logo_url, is_active, discount_percentage')
           .eq('is_active', true)
           .order('name');
       return (data as List).map((e) => _partnerFromRow(e)).toList();
@@ -38,7 +41,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
     try {
       final data = await _supabase
           .from('partners')
-          .select('id, profile_id, name, category, code, address, logo_url, is_active')
+          .select(
+              'id, profile_id, name, category, code, address, logo_url, is_active, discount_percentage')
           .eq('profile_id', profileId)
           .single();
       return _partnerFromRow(data);
@@ -48,17 +52,30 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
   }
 
   @override
+  Future<List<PartnerModel>> getAllPartners() async {
+    try {
+      final data = await _supabase
+          .from('partners')
+          .select(
+              'id, profile_id, name, category, code, address, logo_url, is_active, discount_percentage')
+          .order('name');
+      return (data as List).map((e) => _partnerFromRow(e)).toList();
+    } catch (e) {
+      throw ServerException(message: 'Erro ao buscar parceiros: $e');
+    }
+  }
+
+  @override
   Future<PartnerModel> updatePartner(PartnerEntity entity) async {
     try {
-      await _supabase
-          .from('partners')
-          .update({
-            'name': entity.name,
-            'address': entity.address,
-            'logo_url': entity.logoUrl,
-            'is_active': entity.isActive,
-          })
-          .eq('id', entity.id);
+      await _supabase.from('partners').update({
+        'name': entity.name,
+        'address': entity.address,
+        'logo_url': entity.logoUrl,
+        'is_active': entity.isActive,
+        'discount_percentage': entity.discountPercentage,
+        'category': entity.category,
+      }).eq('id', entity.id);
       return getPartnerByProfileId(entity.profileId);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar parceiro: $e');
@@ -73,7 +90,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
           .from('partners')
           .update({'code': code})
           .eq('id', partnerId)
-          .select('id, profile_id, name, category, code, address, logo_url, is_active')
+          .select(
+              'id, profile_id, name, category, code, address, logo_url, is_active, discount_percentage')
           .single();
       return _partnerFromRow(data);
     } catch (e) {
@@ -81,18 +99,111 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
     }
   }
 
+  // ============================================================
+  // PARTNER APPLICATIONS
+  // ============================================================
+
+  @override
+  Future<void> submitPartnerApplication({
+    required String name,
+    required String category,
+    String? address,
+    String? phone,
+    required String email,
+    String? userId,
+  }) async {
+    try {
+      await _supabase.from('partner_applications').insert({
+        'user_id': userId,
+        'name': name,
+        'category': category,
+        'address': address,
+        'phone': phone,
+        'email': email,
+      });
+    } catch (e) {
+      throw ServerException(message: 'Erro ao enviar candidatura: $e');
+    }
+  }
+
+  @override
+  Future<List<PartnerApplicationModel>> getPartnerApplications() async {
+    try {
+      final data = await _supabase
+          .from('partner_applications')
+          .select(
+              'id, user_id, name, category, address, phone, email, status, created_at, reviewed_at, rejection_reason')
+          .order('created_at', ascending: false);
+      return (data as List)
+          .map((e) =>
+              PartnerApplicationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw ServerException(message: 'Erro ao buscar candidaturas: $e');
+    }
+  }
+
+  @override
+  Future<void> approvePartnerApplication(
+    String id, {
+    required String reviewerId,
+  }) async {
+    try {
+      final application = await _supabase
+          .from('partner_applications')
+          .select(
+              'user_id, name, category, address, proposed_discount_percentage')
+          .eq('id', id)
+          .single();
+      final userId = application['user_id'] as String?;
+
+      if (userId != null) {
+        await _supabase
+            .from('profiles')
+            .update({'role': 'parceiro'}).eq('id', userId);
+        await _supabase.from('partners').insert({
+          'profile_id': userId,
+          'name': application['name'],
+          'category': application['category'],
+          'code': _generateCode(),
+          'address': application['address'],
+          'discount_percentage':
+              (application['proposed_discount_percentage'] as num?)
+                      ?.toDouble() ??
+                  0,
+        });
+      }
+
+      await _supabase.from('partner_applications').update({
+        'status': 'approved',
+        'reviewed_at': DateTime.now().toIso8601String(),
+        'reviewed_by': reviewerId,
+      }).eq('id', id);
+    } catch (e) {
+      throw ServerException(message: 'Erro ao aprovar candidatura: $e');
+    }
+  }
+
+  @override
+  Future<void> rejectPartnerApplication(
+    String id, {
+    required String reviewerId,
+    required String reason,
+  }) async {
+    try {
+      await _supabase.from('partner_applications').update({
+        'status': 'rejected',
+        'rejection_reason': reason,
+        'reviewed_at': DateTime.now().toIso8601String(),
+        'reviewed_by': reviewerId,
+      }).eq('id', id);
+    } catch (e) {
+      throw ServerException(message: 'Erro ao rejeitar candidatura: $e');
+    }
+  }
+
   PartnerModel _partnerFromRow(Map<String, dynamic> e) {
-    return PartnerModel(
-      id: e['id'] as String,
-      profileId: e['profile_id'] as String,
-      name: e['name'] as String,
-      category: e['category'] as String,
-      code: e['code'] as String,
-      address: e['address'] as String? ?? '',
-      phone: '',
-      logoUrl: e['logo_url'] as String? ?? '',
-      isActive: e['is_active'] as bool? ?? true,
-    );
+    return PartnerModel.fromJson(e);
   }
 
   // ============================================================
@@ -105,7 +216,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
     try {
       final data = await _supabase
           .from('partner_services')
-          .select('id, partner_id, name, description, original_price, discounted_price, is_active')
+          .select(
+              'id, partner_id, name, description, original_price, discounted_price, is_active')
           .eq('partner_id', partnerId)
           .eq('is_active', true)
           .order('name');
@@ -120,7 +232,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
     try {
       final data = await _supabase
           .from('partner_services')
-          .select('id, partner_id, name, description, original_price, discounted_price, is_active')
+          .select(
+              'id, partner_id, name, description, original_price, discounted_price, is_active')
           .eq('is_active', true)
           .order('name');
       return (data as List).map((e) => _serviceFromRow(e)).toList();
@@ -130,8 +243,7 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
   }
 
   @override
-  Future<PartnerServiceModel> createService(
-      PartnerServiceEntity entity) async {
+  Future<PartnerServiceModel> createService(PartnerServiceEntity entity) async {
     try {
       final data = await _supabase
           .from('partner_services')
@@ -143,7 +255,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
             'discounted_price': entity.discountedPrice,
             'is_active': entity.isActive,
           })
-          .select('id, partner_id, name, description, original_price, discounted_price, is_active')
+          .select(
+              'id, partner_id, name, description, original_price, discounted_price, is_active')
           .single();
       return _serviceFromRow(data);
     } catch (e) {
@@ -152,8 +265,7 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
   }
 
   @override
-  Future<PartnerServiceModel> updateService(
-      PartnerServiceEntity entity) async {
+  Future<PartnerServiceModel> updateService(PartnerServiceEntity entity) async {
     try {
       final data = await _supabase
           .from('partner_services')
@@ -165,7 +277,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
             'is_active': entity.isActive,
           })
           .eq('id', entity.id)
-          .select('id, partner_id, name, description, original_price, discounted_price, is_active')
+          .select(
+              'id, partner_id, name, description, original_price, discounted_price, is_active')
           .single();
       return _serviceFromRow(data);
     } catch (e) {
@@ -204,7 +317,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
     try {
       final data = await _supabase
           .from('partner_validations')
-          .select('id, partner_id, user_id, user_name, user_badge_level, discount_applied, service_id, service_name, validated_at')
+          .select(
+              'id, partner_id, user_id, user_name, user_badge_level, discount_applied, service_id, service_name, validated_at, discount_percentage, original_value, savings_amount, beneficiary_type, dependent_id')
           .eq('partner_id', partnerId)
           .order('validated_at', ascending: false);
       return (data as List).map((e) => _validationFromRow(e)).toList();
@@ -260,7 +374,8 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
             'discount_applied': discountApplied,
             'service_name': service['name'] as String,
           })
-          .select('id, partner_id, user_id, user_name, user_badge_level, discount_applied, service_id, service_name, validated_at')
+          .select(
+              'id, partner_id, user_id, user_name, user_badge_level, discount_applied, service_id, service_name, validated_at')
           .single();
       return _validationFromRow(data);
     } catch (e) {
@@ -273,28 +388,43 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
     // Token temporário: UUID curto, válido por 5 min no cliente
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random.secure();
-    return String.fromCharCodes(
-        Iterable.generate(8, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
+    return String.fromCharCodes(Iterable.generate(
+        8, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
   }
 
   PartnerValidationModel _validationFromRow(Map<String, dynamic> e) {
-    return PartnerValidationModel(
-      id: e['id'] as String,
-      partnerId: e['partner_id'] as String,
-      userId: e['user_id'] as String,
-      userName: e['user_name'] as String,
-      userBadgeLevel: e['user_badge_level'] as String? ?? 'bronze',
-      discountApplied: (e['discount_applied'] as num?)?.toDouble() ?? 0,
-      serviceId: e['service_id'] as String,
-      serviceName: e['service_name'] as String,
-      validatedAt: DateTime.parse(e['validated_at'] as String),
-    );
+    return PartnerValidationModel.fromJson(e);
+  }
+
+  @override
+  Future<Map<String, dynamic>> confirmPartnerValidation({
+    required String holderUserId,
+    required String memberName,
+    String? dependentId,
+    double? originalValue,
+    String? planLevel,
+  }) async {
+    try {
+      final result = await _supabase.rpc('confirm_partner_validation', params: {
+        'p_holder_user_id': holderUserId,
+        'p_member_name': memberName,
+        'p_dependent_id': dependentId,
+        'p_original_value': originalValue,
+        'p_plan_level': planLevel,
+      });
+      return Map<String, dynamic>.from(result as Map);
+    } catch (e) {
+      throw ServerException(
+        message: RateLimitMessages.messageOrNull(e) ??
+            'Erro ao confirmar validação: $e',
+      );
+    }
   }
 
   String _generateCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random.secure();
-    return String.fromCharCodes(
-        Iterable.generate(8, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
+    return String.fromCharCodes(Iterable.generate(
+        8, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
   }
 }

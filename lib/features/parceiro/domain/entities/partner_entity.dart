@@ -11,6 +11,9 @@ class PartnerEntity extends Equatable {
   final String logoUrl;
   final bool isActive;
 
+  /// Percentual vivo do acordo (publicado pelo financeiro).
+  final double discountPercentage;
+
   const PartnerEntity({
     required this.id,
     required this.profileId,
@@ -21,7 +24,31 @@ class PartnerEntity extends Equatable {
     required this.phone,
     required this.logoUrl,
     required this.isActive,
+    this.discountPercentage = 0,
   });
+
+  PartnerEntity copyWith({
+    String? name,
+    String? category,
+    String? address,
+    String? phone,
+    String? logoUrl,
+    bool? isActive,
+    double? discountPercentage,
+  }) {
+    return PartnerEntity(
+      id: id,
+      profileId: profileId,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      code: code,
+      address: address ?? this.address,
+      phone: phone ?? this.phone,
+      logoUrl: logoUrl ?? this.logoUrl,
+      isActive: isActive ?? this.isActive,
+      discountPercentage: discountPercentage ?? this.discountPercentage,
+    );
+  }
 
   @override
   List<Object?> get props => [
@@ -34,5 +61,6 @@ class PartnerEntity extends Equatable {
         phone,
         logoUrl,
         isActive,
+        discountPercentage,
       ];
 }

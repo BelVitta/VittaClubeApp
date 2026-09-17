@@ -19,7 +19,8 @@ class PartnerValidationsListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<PartnerValidationBloc>()..add(LoadPartnerValidations(partnerId)),
+      create: (_) =>
+          sl<PartnerValidationBloc>()..add(LoadPartnerValidations(partnerId)),
       child: const _PartnerValidationsListView(),
     );
   }
@@ -31,12 +32,14 @@ class _PartnerValidationsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AdminPageScaffold(
-      title: 'Validacoes',
+      title: 'Validações',
       body: Column(
         children: [
           AdminSearchBar(
             onChanged: (query) {
-              context.read<PartnerValidationBloc>().add(SearchPartnerValidations(query));
+              context
+                  .read<PartnerValidationBloc>()
+                  .add(SearchPartnerValidations(query));
             },
           ),
           const SizedBox(height: 16),
@@ -57,8 +60,8 @@ class _PartnerValidationsListView extends StatelessWidget {
                   state.status == PartnerValidationStatus.loaded) {
                 return const AdminEmptyState(
                   icon: Icons.verified_outlined,
-                  message: 'Nenhuma validacao encontrada',
-                  subtitle: 'As validacoes de desconto aparecerao aqui.',
+                  message: 'Nenhuma validação encontrada',
+                  subtitle: 'As validações de desconto aparecerão aqui.',
                 );
               }
 
@@ -98,11 +101,16 @@ class _PartnerValidationsListView extends StatelessWidget {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                                color: const Color(0xFF4CAF50)
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                'R\$ ${validation.discountApplied.toStringAsFixed(2)}',
+                                validation.savingsAmount > 0
+                                    ? 'Economia R\$ ${validation.savingsAmount.toStringAsFixed(2)}'
+                                    : validation.discountPercentage != null
+                                        ? '${validation.discountPercentage!.toStringAsFixed(0)}%'
+                                        : 'R\$ ${validation.discountApplied.toStringAsFixed(2)}',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

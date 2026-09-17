@@ -5,13 +5,21 @@ import '../repositories/member_qr_validation_repository.dart';
 import '../repositories/qr_validation_repository.dart';
 
 class ValidateMemberQrParams {
-  final String userId;
+  /// UUID (QR da carteirinha) ou código curto de 8 dígitos.
+  final String identifier;
   final String actorUserId;
 
   const ValidateMemberQrParams({
-    required this.userId,
+    required this.identifier,
     required this.actorUserId,
   });
+
+  /// Compat: callers antigos usavam `userId`.
+  factory ValidateMemberQrParams.fromUserId({
+    required String userId,
+    required String actorUserId,
+  }) =>
+      ValidateMemberQrParams(identifier: userId, actorUserId: actorUserId);
 }
 
 class ValidateMemberQrUseCase {
@@ -23,7 +31,7 @@ class ValidateMemberQrUseCase {
     ValidateMemberQrParams params,
   ) {
     return repository.validateMemberQr(
-      userId: params.userId,
+      identifier: params.identifier,
       actorUserId: params.actorUserId,
     );
   }

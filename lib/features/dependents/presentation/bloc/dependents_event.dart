@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/dependent_enums.dart';
+
 abstract class DependentsEvent extends Equatable {
   const DependentsEvent();
 
@@ -11,13 +13,18 @@ class LoadDependents extends DependentsEvent {
   final String holderUserId;
   final String cycleReference;
 
+  /// `null` (default) = todos os status — é o que a tela do titular precisa
+  /// pra mostrar o badge de "pendente de aprovação".
+  final DependentStatus? status;
+
   const LoadDependents({
     required this.holderUserId,
     required this.cycleReference,
+    this.status,
   });
 
   @override
-  List<Object?> get props => [holderUserId, cycleReference];
+  List<Object?> get props => [holderUserId, cycleReference, status];
 }
 
 class CreateDependentRequested extends DependentsEvent {

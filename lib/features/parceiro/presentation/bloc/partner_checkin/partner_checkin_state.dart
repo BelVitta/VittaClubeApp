@@ -2,7 +2,14 @@ import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/partner_validation_entity.dart';
 
-enum PartnerCheckinStatus { initial, generatingToken, tokenGenerated, validating, validated, failure }
+enum PartnerCheckinStatus {
+  initial,
+  generatingToken,
+  tokenGenerated,
+  validating,
+  validated,
+  failure
+}
 
 class PartnerCheckinState extends Equatable {
   final PartnerCheckinStatus status;
@@ -36,5 +43,6 @@ class PartnerCheckinState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, tokenValue, expiresAt, validation, errorMessage];
+  List<Object?> get props =>
+      [status, tokenValue, expiresAt, validation, errorMessage];
 }

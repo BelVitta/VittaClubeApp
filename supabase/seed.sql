@@ -135,7 +135,7 @@ BEGIN
     ON CONFLICT DO NOTHING;
 
     -- Notificações
-    INSERT INTO public.notifications (user_id, type, title, message, is_read, created_at) VALUES
+    INSERT INTO public.notifications (user_id, type, title, body, is_read, created_at) VALUES
         (v_user_id, 'sistema',  'Bem-vindo ao Vita Clube!',       'Sua assinatura está ativa. Aproveite os benefícios.', TRUE,  NOW() - INTERVAL '8 months'),
         (v_user_id, 'badge',    'Você subiu para Ouro!',          'Parabéns! Agora você tem 15% de desconto nos parceiros.', TRUE,  NOW() - INTERVAL '60 days'),
         (v_user_id, 'consulta', 'Consulta confirmada',            'Sua sessão de psicoterapia está marcada para breve.', FALSE, NOW() - INTERVAL '2 days'),

@@ -15,7 +15,7 @@ class CreateReferralUseCase {
       (count) async {
         if (count >= 10) {
           return const Left(
-            ValidationFailure('Limite de 10 indicacoes por mes atingido.'),
+            ValidationFailure('Limite de 10 indicações por mês atingido.'),
           );
         }
         return repository.createReferral(userId);
