@@ -20,8 +20,10 @@ dart format lib/         # Formatar código
 O app tem três entry points — escolha com `-t`:
 
 ```bash
-# Dev: dados mock locais, sem Supabase
-flutter run -t lib/main_dev.dart
+# Dev: projeto Supabase de desenvolvimento (credenciais via dart-define)
+flutter run -t lib/main_dev.dart \\
+  --dart-define=SUPABASE_URL="$SUPABASE_DEV_URL" \\
+  --dart-define=SUPABASE_ANON_KEY="$SUPABASE_DEV_ANON_KEY"
 
 # Staging: projeto Supabase `vita-clube-dev` (dados descartáveis, seed demo)
 flutter run -t lib/main_staging.dart
