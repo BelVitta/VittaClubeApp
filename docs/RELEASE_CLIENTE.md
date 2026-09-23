@@ -42,17 +42,22 @@ Validar manualmente contas com `profiles.role`:
 - `financeiro`: entra no dashboard financeiro e acessa operacional.
 - `parceiro`: entra no painel parceiro.
 
-## Build APK produção
+## Build AAB produção
 
 ```bash
-flutter build apk --release --flavor prod -t lib/main_prod.dart \
+MERCADOPAGO_PUBLIC_KEY="$MERCADOPAGO_PUBLIC_KEY" \
+flutter build appbundle --release -t lib/main_prod.dart \
   --dart-define=SUPABASE_URL="$SUPABASE_PROD_URL" \
   --dart-define=SUPABASE_ANON_KEY="$SUPABASE_PROD_ANON_KEY" \
-  --dart-define=QR_SECRET="$QR_SECRET"
+  --dart-define=QR_SECRET="$QR_SECRET" \
+  --dart-define=MERCADOPAGO_PUBLIC_KEY="$MERCADOPAGO_PUBLIC_KEY"
 ```
 
-APK esperado:
+A seleção de produção é feita pelo entrypoint `lib/main_prod.dart`; o projeto não
+usa `--flavor prod`.
+
+Bundle esperado:
 
 ```text
-build/app/outputs/flutter-apk/app-prod-release.apk
+build/app/outputs/bundle/release/app-release.aab
 ```

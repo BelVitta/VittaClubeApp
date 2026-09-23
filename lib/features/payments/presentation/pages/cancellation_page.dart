@@ -8,13 +8,17 @@ import 'cancellation_reason_page.dart';
 /// Página de Cancelamento - Etapa 1: Mostra o que o usuário vai perder
 class CancellationPage extends StatelessWidget {
   final String subscriptionId;
-  final PixAutomaticSubscriptionStatus pixStatus;
+  final SubscriptionBillingStatus billingStatus;
+  final SubscriptionProvider provider;
 
   const CancellationPage({
     super.key,
     required this.subscriptionId,
-    required this.pixStatus,
-  });
+    SubscriptionBillingStatus? billingStatus,
+    @Deprecated('Use billingStatus') SubscriptionBillingStatus? pixStatus,
+    this.provider = SubscriptionProvider.manual,
+  }) : billingStatus =
+            pixStatus ?? billingStatus ?? SubscriptionBillingStatus.none;
 
   static const List<String> _benefits = [
     'Consultas com desconto exclusivo',
@@ -65,8 +69,8 @@ class CancellationPage extends StatelessWidget {
                           width: 39,
                           height: 39,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF01225B)
-                                .withValues(alpha: 0.2),
+                            color:
+                                const Color(0xFF01225B).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(19.5),
                           ),
                           child: const Icon(
@@ -135,7 +139,8 @@ class CancellationPage extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (_) => CancellationReasonPage(
                                 subscriptionId: subscriptionId,
-                                pixStatus: pixStatus,
+                                billingStatus: billingStatus,
+                                provider: provider,
                               ),
                             ),
                           );

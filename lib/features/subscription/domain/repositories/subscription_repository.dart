@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/pix_automatic_models.dart';
 import '../entities/subscription_entity.dart';
+import '../entities/subscription_status.dart';
 
 /// Contrato de acesso à assinatura do usuário atual.
 abstract class SubscriptionRepository {
@@ -21,6 +22,12 @@ abstract class SubscriptionRepository {
   Future<Either<Failure, void>> cancelSubscription({
     required String subscriptionId,
     String? reason,
+    SubscriptionProvider provider = SubscriptionProvider.manual,
+  });
+
+  Future<Either<Failure, SubscriptionEntity>> createMercadoPagoSubscription({
+    required String planId,
+    required String cardTokenId,
   });
 
   /// Cria assinatura via Pix Automático.
@@ -30,7 +37,9 @@ abstract class SubscriptionRepository {
   });
 
   /// Relê o status da assinatura do servidor (sem cache).
-  Future<Either<Failure, SubscriptionEntity?>> refreshSubscriptionStatus();
+  Future<Either<Failure, SubscriptionEntity?>> refreshSubscriptionStatus({
+    String? subscriptionId,
+  });
 
   /// Salva o perfil de cobrança do usuário para Pix Automático.
   Future<Either<Failure, PixAutomaticBillingProfile>> saveBillingProfile(

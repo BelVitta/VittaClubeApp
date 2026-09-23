@@ -22,24 +22,19 @@ class PaymentRequest extends Equatable {
   final double amount;
   final PaymentMethodType method;
 
-  /// Para cartão. Null quando método for pix/boleto.
-  final String? cardHolderName;
-  final String? cardNumber;
-  final String? cardExpiry;
-  final String? cardCvv;
+  /// Identificador seguro emitido por um tokenizador PCI. Dados brutos de
+  /// cartão nunca fazem parte deste contrato.
+  final String? paymentTokenId;
 
   const PaymentRequest({
     required this.planId,
     required this.amount,
     required this.method,
-    this.cardHolderName,
-    this.cardNumber,
-    this.cardExpiry,
-    this.cardCvv,
+    this.paymentTokenId,
   });
 
   @override
-  List<Object?> get props => [planId, amount, method, cardHolderName, cardNumber];
+  List<Object?> get props => [planId, amount, method, paymentTokenId];
 }
 
 /// Resposta do gateway após a tentativa de cobrança.

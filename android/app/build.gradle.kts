@@ -8,6 +8,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val mercadoPagoPublicKey = providers.gradleProperty("MERCADOPAGO_PUBLIC_KEY")
+    .orElse(providers.environmentVariable("MERCADOPAGO_PUBLIC_KEY"))
+    .getOrElse("")
+
 android {
     namespace = "com.example.vita_clube"
     compileSdk = flutter.compileSdkVersion
@@ -27,10 +31,21 @@ android {
         applicationId = "com.example.vita_clube"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Mercado Pago Core Methods requires 23; the current Flutter
+        // integration_test plugin requires 24, so the effective floor is 24.
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        buildConfigField(
+            "String",
+            "MERCADOPAGO_PUBLIC_KEY",
+            "\"${mercadoPagoPublicKey.replace("\"", "\\\"")}\"",
+        )
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -40,6 +55,14 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    implementation(platform("com.mercadopago.android.sdk:sdk-android-bom:1.0.0"))
+    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    implementation("com.mercadopago.android.sdk:core-methods")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 }
 
 flutter {

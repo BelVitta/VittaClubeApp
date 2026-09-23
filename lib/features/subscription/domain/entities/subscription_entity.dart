@@ -18,8 +18,10 @@ class SubscriptionEntity extends Equatable {
   final bool isCurrent;
   final DateTime? cancelledAt;
 
-  /// Status do Pix Automático. `none` quando não utiliza Pix Automático.
-  final PixAutomaticSubscriptionStatus pixStatus;
+  /// Estado financeiro independente do provedor de recorrência.
+  final SubscriptionBillingStatus billingStatus;
+
+  final SubscriptionProvider provider;
 
   /// Status de acesso ao pagamento (controla bloqueio por inadimplência).
   final PaymentAccessStatus paymentAccessStatus;
@@ -42,12 +44,17 @@ class SubscriptionEntity extends Equatable {
     this.expirationDate,
     required this.isCurrent,
     this.cancelledAt,
-    this.pixStatus = PixAutomaticSubscriptionStatus.none,
+    SubscriptionBillingStatus billingStatus = SubscriptionBillingStatus.none,
+    @Deprecated('Use billingStatus') SubscriptionBillingStatus? pixStatus,
+    this.provider = SubscriptionProvider.manual,
     this.paymentAccessStatus = PaymentAccessStatus.allowed,
     this.paymentLinkUrl,
     this.nextBillingDate,
     this.currentPeriodEnd,
-  });
+  }) : billingStatus = pixStatus ?? billingStatus;
+
+  @Deprecated('Use billingStatus')
+  SubscriptionBillingStatus get pixStatus => billingStatus;
 
   bool get isActive =>
       isCurrent &&
@@ -56,9 +63,9 @@ class SubscriptionEntity extends Equatable {
       level != PlanLevel.cancelado;
 
   bool get canAccessBenefits {
-    if (pixStatus == PixAutomaticSubscriptionStatus.none) return isActive;
+    if (billingStatus == SubscriptionBillingStatus.none) return isActive;
     return SubscriptionAccessPolicy(
-      status: pixStatus,
+      status: billingStatus,
       accessStatus: paymentAccessStatus,
       currentPeriodEnd: currentPeriodEnd,
     ).canAccessBenefits;
@@ -76,7 +83,8 @@ class SubscriptionEntity extends Equatable {
         expirationDate,
         isCurrent,
         cancelledAt,
-        pixStatus,
+        billingStatus,
+        provider,
         paymentAccessStatus,
         paymentLinkUrl,
         nextBillingDate,

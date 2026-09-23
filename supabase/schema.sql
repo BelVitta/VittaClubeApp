@@ -171,6 +171,7 @@ CREATE TABLE public.badges (
     required_consultations INTEGER NOT NULL DEFAULT 0,
     required_referrals INTEGER NOT NULL DEFAULT 0,
     requires_annual_plan BOOLEAN NOT NULL DEFAULT FALSE,
+    annual_draw_limit INTEGER NOT NULL DEFAULT 0 CHECK (annual_draw_limit >= -1),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -187,6 +188,7 @@ CREATE TABLE public.badge_progress (
     referral_count INTEGER NOT NULL DEFAULT 0 CHECK (referral_count >= 0),
     plan_activation_date TIMESTAMPTZ,
     has_annual_plan BOOLEAN NOT NULL DEFAULT FALSE,
+    paid_months INTEGER NOT NULL DEFAULT 0 CHECK (paid_months >= 0),
     last_upgrade_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -888,57 +890,112 @@ CREATE POLICY "Admins can view audit log"
 -- FUNCTION: Executar sorteio com transparência (ACID)
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION execute_draw(draw_id UUID, seed TEXT)
-RETURNS UUID AS $$
+DROP FUNCTION IF EXISTS public.execute_draw(UUID, TEXT);
+
+CREATE OR REPLACE FUNCTION public.execute_draw(p_draw_id UUID)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, extensions, public
+AS $$
 DECLARE
+    v_actor_role public.user_role;
+    v_draw public.draws;
     v_participant_ids UUID[];
     v_participant_count INTEGER;
     v_winner_index INTEGER;
     v_winner_id UUID;
+    v_seed TEXT;
     v_seed_hash TEXT;
     v_participant_hash TEXT;
 BEGIN
-    -- Verificar status do sorteio
-    IF NOT EXISTS (
-        SELECT 1 FROM public.draws
-        WHERE id = draw_id AND status = 'inscricoes_encerradas'
-    ) THEN
+    IF auth.uid() IS NULL THEN
+        RAISE EXCEPTION 'Usuário não autenticado';
+    END IF;
+
+    SELECT role INTO v_actor_role
+      FROM public.profiles
+     WHERE id = auth.uid();
+    IF v_actor_role IS NULL
+       OR v_actor_role NOT IN ('admin'::public.user_role, 'financeiro'::public.user_role) THEN
+        RAISE EXCEPTION 'Somente admin ou financeiro pode executar sorteios';
+    END IF;
+
+    SELECT d.* INTO v_draw
+      FROM public.draws d
+     WHERE d.id = p_draw_id
+     FOR UPDATE;
+    IF NOT FOUND OR v_draw.status <> 'inscricoes_encerradas' THEN
         RAISE EXCEPTION 'Sorteio não está pronto para execução';
     END IF;
 
-    -- Buscar participantes ordenados por ID (determinístico)
     SELECT ARRAY_AGG(user_id ORDER BY user_id)
-    INTO v_participant_ids
-    FROM public.draw_participants
-    WHERE draw_participants.draw_id = execute_draw.draw_id;
+      INTO v_participant_ids
+      FROM public.draw_participants
+     WHERE draw_participants.draw_id = p_draw_id;
 
-    v_participant_count := array_length(v_participant_ids, 1);
+    v_participant_count := COALESCE(array_length(v_participant_ids, 1), 0);
 
-    IF v_participant_count IS NULL OR v_participant_count = 0 THEN
+    IF v_participant_count = 0 THEN
         RAISE EXCEPTION 'Nenhum participante registrado';
     END IF;
 
-    -- Gerar hashes para transparência
-    v_seed_hash := encode(digest(seed, 'sha256'), 'hex');
-    v_participant_hash := encode(digest(array_to_string(v_participant_ids, ','), 'sha256'), 'hex');
+    v_seed := encode(extensions.gen_random_bytes(32), 'hex');
+    v_seed_hash := encode(extensions.digest(v_seed, 'sha256'), 'hex');
+    v_participant_hash := encode(extensions.digest(array_to_string(v_participant_ids, ','), 'sha256'), 'hex');
 
-    -- Selecionar vencedor deterministicamente pelo seed
-    v_winner_index := abs(('x' || substring(v_seed_hash, 1, 8))::bit(32)::integer) % v_participant_count;
-    v_winner_id := v_participant_ids[v_winner_index + 1]; -- arrays PG começam em 1
+    v_winner_index := mod(
+        (('x' || substring(v_seed_hash, 1, 8))::bit(32)::bigint + 2147483648),
+        v_participant_count
+    )::integer;
+    v_winner_id := v_participant_ids[v_winner_index + 1];
 
-    -- Atualizar sorteio atomicamente
-    UPDATE public.draws SET
-        status = 'realizado',
-        winner_id = v_winner_id,
-        draw_seed_hash = v_seed_hash,
-        participant_list_hash = v_participant_hash,
-        executed_at = NOW(),
-        winner_index = v_winner_index
-    WHERE id = draw_id;
+    PERFORM set_config('vitta.draw_execution', 'true', true);
+    UPDATE public.draws
+       SET status = 'realizado',
+           winner_id = v_winner_id,
+           draw_seed_hash = v_seed_hash,
+           participant_list_hash = v_participant_hash,
+           executed_at = NOW(),
+           winner_index = v_winner_index,
+           participant_count = v_participant_count,
+           updated_at = NOW()
+     WHERE id = p_draw_id;
 
     RETURN v_winner_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE ALL ON FUNCTION public.execute_draw(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.execute_draw(UUID) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.prevent_direct_draw_result_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, extensions, public
+AS $$
+BEGIN
+    IF current_setting('vitta.draw_execution', true) IS DISTINCT FROM 'true'
+       AND (
+           NEW.status = 'realizado'
+           OR (OLD.status = 'realizado' AND NEW.status IS DISTINCT FROM OLD.status)
+           OR NEW.winner_id IS DISTINCT FROM OLD.winner_id
+           OR NEW.winner_index IS DISTINCT FROM OLD.winner_index
+           OR NEW.draw_seed_hash IS DISTINCT FROM OLD.draw_seed_hash
+           OR NEW.participant_list_hash IS DISTINCT FROM OLD.participant_list_hash
+           OR NEW.executed_at IS DISTINCT FROM OLD.executed_at
+       ) THEN
+        RAISE EXCEPTION 'Resultado do sorteio só pode ser definido pelo servidor';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_prevent_direct_draw_result_update ON public.draws;
+CREATE TRIGGER trg_prevent_direct_draw_result_update
+BEFORE UPDATE ON public.draws
+FOR EACH ROW EXECUTE FUNCTION public.prevent_direct_draw_result_update();
 
 -- ============================================================
 -- FUNCTION: Criar perfil automaticamente após signup

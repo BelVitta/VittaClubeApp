@@ -1,10 +1,6 @@
-/// Servico que verifica limites de consultas por mes baseado no badge do usuario.
-///
-/// Tabela de limites (spec):
-/// - Bronze: 4 consultas/mes
-/// - Prata: 8 consultas/mes
-/// - Ouro: 12 consultas/mes
-/// - Diamante: 20 consultas/mes
+import 'badge_catalog_service.dart';
+
+/// Serviço que verifica limites publicados pelo financeiro.
 class ConsultationLimitService {
   final String badgeLevel;
   final int consultationsThisMonth;
@@ -39,22 +35,8 @@ class ConsultationLimitService {
     return 'Você atingiu o limite de $maxConsultationsPerMonth consultas este mês.';
   }
 
-  /// Retorna o limite padrao por nivel de badge
+  /// Retorna o limite configurado no banco para a patente.
   static int getDefaultLimit(String badgeLevel) {
-    switch (badgeLevel.toLowerCase()) {
-      case 'bronze':
-        return 4;
-      case 'silver':
-      case 'prata':
-        return 8;
-      case 'gold':
-      case 'ouro':
-        return 12;
-      case 'diamond':
-      case 'diamante':
-        return 20;
-      default:
-        return 0;
-    }
+    return BadgeCatalogService.consultationsLimitFor(badgeLevel);
   }
 }

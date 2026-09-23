@@ -9,6 +9,8 @@ class BadgeProgressEntity extends Equatable {
   final DateTime memberSince;
   final DateTime? planActivationDate;
   final bool hasAnnualPlan;
+  final int paidMonths;
+  final Map<String, int> requiredMonthsByLevel;
 
   const BadgeProgressEntity({
     required this.userId,
@@ -18,46 +20,47 @@ class BadgeProgressEntity extends Equatable {
     required this.memberSince,
     this.planActivationDate,
     this.hasAnnualPlan = false,
+    this.paidMonths = 0,
+    this.requiredMonthsByLevel = const {},
   });
 
-  /// Meses como membro ativo
-  int get monthsAsMember {
-    return DateTime.now().difference(memberSince).inDays ~/ 30;
-  }
+  /// Meses pagos acumulados. A evolução não usa o tempo desde o cadastro.
+  int get monthsAsMember => paidMonths;
 
-  /// Verifica se pode subir para Prata
-  /// Requisitos: 6 meses + 4 consultas
+  /// A evolução oficial é baseada apenas nas mensalidades aprovadas.
   bool get canUpgradeToSilver {
     if (currentBadgeLevel != 'bronze') return false;
-    return monthsAsMember >= 6 && consultationCount >= 4;
+    final target = requiredMonthsByLevel['prata'] ?? 0;
+    return target > 0 && monthsAsMember >= target;
   }
 
-  /// Verifica se pode subir para Ouro
-  /// Requisitos: +6 meses (12 total) + 6 consultas + 2 indicacoes
   bool get canUpgradeToGold {
-    if (currentBadgeLevel != 'silver') return false;
-    return monthsAsMember >= 12 && consultationCount >= 6 && referralCount >= 2;
+    if (currentBadgeLevel != 'silver' && currentBadgeLevel != 'prata') {
+      return false;
+    }
+    final target = requiredMonthsByLevel['ouro'] ?? 0;
+    return target > 0 && monthsAsMember >= target;
   }
 
-  /// Verifica se pode subir para Diamante
-  /// Requisitos: +12 meses (24 total) + 14 consultas + 3 indicacoes + plano anual
   bool get canUpgradeToDiamond {
-    if (currentBadgeLevel != 'gold') return false;
-    return monthsAsMember >= 24 &&
-        consultationCount >= 14 &&
-        referralCount >= 3 &&
-        hasAnnualPlan;
+    if (currentBadgeLevel != 'gold' && currentBadgeLevel != 'ouro') {
+      return false;
+    }
+    final target = requiredMonthsByLevel['diamante'] ?? 0;
+    return target > 0 && monthsAsMember >= target;
   }
 
   /// Retorna o proximo nivel possivel, ou null se ja esta no maximo
   String? get nextBadgeLevel {
     switch (currentBadgeLevel) {
       case 'bronze':
-        return 'silver';
+        return 'prata';
+      case 'prata':
       case 'silver':
-        return 'gold';
+        return 'ouro';
+      case 'ouro':
       case 'gold':
-        return 'diamond';
+        return 'diamante';
       default:
         return null;
     }
@@ -72,23 +75,22 @@ class BadgeProgressEntity extends Equatable {
   double get progressToNextLevel {
     switch (currentBadgeLevel) {
       case 'bronze':
-        final monthsProgress = (monthsAsMember / 6).clamp(0.0, 1.0);
-        final consultProgress = (consultationCount / 4).clamp(0.0, 1.0);
-        return (monthsProgress + consultProgress) / 2;
+        return _progressFor('prata');
       case 'silver':
-        final monthsProgress = (monthsAsMember / 12).clamp(0.0, 1.0);
-        final consultProgress = (consultationCount / 6).clamp(0.0, 1.0);
-        final referralProgress = (referralCount / 2).clamp(0.0, 1.0);
-        return (monthsProgress + consultProgress + referralProgress) / 3;
+      case 'prata':
+        return _progressFor('ouro');
       case 'gold':
-        final monthsProgress = (monthsAsMember / 24).clamp(0.0, 1.0);
-        final consultProgress = (consultationCount / 14).clamp(0.0, 1.0);
-        final referralProgress = (referralCount / 3).clamp(0.0, 1.0);
-        final planProgress = hasAnnualPlan ? 1.0 : 0.0;
-        return (monthsProgress + consultProgress + referralProgress + planProgress) / 4;
+      case 'ouro':
+        return _progressFor('diamante');
       default:
         return 1.0;
     }
+  }
+
+  double _progressFor(String level) {
+    final target = requiredMonthsByLevel[level] ?? 0;
+    if (target == 0) return 0;
+    return (monthsAsMember / target).clamp(0.0, 1.0);
   }
 
   @override
@@ -100,5 +102,7 @@ class BadgeProgressEntity extends Equatable {
         memberSince,
         planActivationDate,
         hasAnnualPlan,
+        paidMonths,
+        requiredMonthsByLevel,
       ];
 }

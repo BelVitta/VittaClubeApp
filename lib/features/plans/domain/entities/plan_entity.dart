@@ -18,13 +18,19 @@ class PlanBenefit extends Equatable {
 /// Entidade que representa um plano de assinatura
 class PlanEntity extends Equatable {
   final SubscriptionType type;
+  final String name;
+  final double price;
+  final String? discountLabel;
   final List<PlanBenefit> benefits;
 
   const PlanEntity({
     required this.type,
+    this.name = '',
+    this.price = 0,
+    this.discountLabel,
     required this.benefits,
   });
 
   @override
-  List<Object?> get props => [type, benefits];
+  List<Object?> get props => [type, name, price, discountLabel, benefits];
 }

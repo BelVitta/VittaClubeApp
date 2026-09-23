@@ -13,6 +13,8 @@ class BadgeModel extends BadgeEntity {
     required super.sortOrder,
     super.discountPercentage,
     super.maxConsultationsPerMonth,
+    super.requiredMonths,
+    super.annualDrawLimit,
   });
 
   /// Cria BadgeModel a partir de JSON
@@ -27,6 +29,8 @@ class BadgeModel extends BadgeEntity {
       sortOrder: json['sortOrder'] as int,
       discountPercentage: (json['discountPercentage'] as num?)?.toDouble() ?? 0,
       maxConsultationsPerMonth: json['maxConsultationsPerMonth'] as int? ?? 0,
+      requiredMonths: json['requiredMonths'] as int? ?? 0,
+      annualDrawLimit: json['annualDrawLimit'] as int? ?? 0,
     );
   }
 
@@ -42,6 +46,8 @@ class BadgeModel extends BadgeEntity {
       'sortOrder': sortOrder,
       'discountPercentage': discountPercentage,
       'maxConsultationsPerMonth': maxConsultationsPerMonth,
+      'requiredMonths': requiredMonths,
+      'annualDrawLimit': annualDrawLimit,
     };
   }
 
@@ -57,6 +63,8 @@ class BadgeModel extends BadgeEntity {
       sortOrder: entity.sortOrder,
       discountPercentage: entity.discountPercentage,
       maxConsultationsPerMonth: entity.maxConsultationsPerMonth,
+      requiredMonths: entity.requiredMonths,
+      annualDrawLimit: entity.annualDrawLimit,
     );
   }
 }

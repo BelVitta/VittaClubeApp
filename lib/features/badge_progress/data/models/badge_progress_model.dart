@@ -10,6 +10,8 @@ class BadgeProgressModel extends BadgeProgressEntity {
     required super.memberSince,
     super.planActivationDate,
     super.hasAnnualPlan,
+    super.paidMonths,
+    super.requiredMonthsByLevel,
   });
 
   factory BadgeProgressModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,9 @@ class BadgeProgressModel extends BadgeProgressEntity {
           ? DateTime.parse(json['planActivationDate'] as String)
           : null,
       hasAnnualPlan: json['hasAnnualPlan'] as bool? ?? false,
+      paidMonths: json['paidMonths'] as int? ?? 0,
+      requiredMonthsByLevel:
+          Map<String, int>.from(json['requiredMonthsByLevel'] as Map? ?? {}),
     );
   }
 
@@ -35,6 +40,8 @@ class BadgeProgressModel extends BadgeProgressEntity {
       'memberSince': memberSince.toIso8601String(),
       'planActivationDate': planActivationDate?.toIso8601String(),
       'hasAnnualPlan': hasAnnualPlan,
+      'paidMonths': paidMonths,
+      'requiredMonthsByLevel': requiredMonthsByLevel,
     };
   }
 
@@ -47,6 +54,8 @@ class BadgeProgressModel extends BadgeProgressEntity {
       memberSince: entity.memberSince,
       planActivationDate: entity.planActivationDate,
       hasAnnualPlan: entity.hasAnnualPlan,
+      paidMonths: entity.paidMonths,
+      requiredMonthsByLevel: entity.requiredMonthsByLevel,
     );
   }
 }

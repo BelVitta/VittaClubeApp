@@ -29,6 +29,11 @@ flutter_ios_podfile_setup
 target 'Runner' do
   use_frameworks!
 
+  # Mercado Pago Core Methods: PCI fields and card-token generation for iOS.
+  pod 'MercadoPagoSDKCoreMethods',
+      :git => 'https://github.com/mercadopago/sdk-ios.git',
+      :tag => '0.3.0'
+
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
@@ -38,5 +43,17 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    # Xcode 26 no longer accepts the older deployment targets declared by
+    # some transitive Pods. Keep every Pod aligned with the app target.
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
+      if target.name == 'MercadoPagoSDKCoreMethods'
+        # The SDK ships with Swift 6 metadata, while the current Xcode
+        # compiler still builds this CocoaPod in Swift 5 compatibility mode.
+        config.build_settings['SWIFT_VERSION'] = '5.9'
+        config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'
+      end
+    end
   end
 end

@@ -35,11 +35,41 @@ class PlanCard extends StatelessWidget {
         children: [
           // Plan title
           Text(
-            plan.type.displayName,
+            plan.name.isEmpty ? plan.type.displayName : plan.name,
             style: GoogleFonts.outfit(
               fontSize: 16,
               fontWeight: FontWeight.w500,
               color: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                'R\$ ${plan.price.toStringAsFixed(2).replaceAll('.', ',')}',
+                style: GoogleFonts.outfit(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '/mês',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  color: const Color(0xFF6D7F95),
+                ),
+              ),
+            ],
+          ),
+          Text(
+            'Sem permanência mínima · cancele quando quiser',
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              color: const Color(0xFF6D7F95),
             ),
           ),
           const SizedBox(height: 6),

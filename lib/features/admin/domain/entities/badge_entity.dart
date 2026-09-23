@@ -12,6 +12,8 @@ class BadgeEntity extends Equatable {
   final int sortOrder;
   final double discountPercentage;
   final int maxConsultationsPerMonth;
+  final int requiredMonths;
+  final int annualDrawLimit;
 
   const BadgeEntity({
     required this.id,
@@ -23,6 +25,8 @@ class BadgeEntity extends Equatable {
     required this.sortOrder,
     this.discountPercentage = 0,
     this.maxConsultationsPerMonth = 0,
+    this.requiredMonths = 0,
+    this.annualDrawLimit = 0,
   });
 
   @override
@@ -36,5 +40,7 @@ class BadgeEntity extends Equatable {
         sortOrder,
         discountPercentage,
         maxConsultationsPerMonth,
+        requiredMonths,
+        annualDrawLimit,
       ];
 }

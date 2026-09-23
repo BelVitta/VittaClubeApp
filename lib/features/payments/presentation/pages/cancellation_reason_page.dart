@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/error/rate_limit.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -11,13 +10,17 @@ import '../../../subscription/domain/usecases/cancel_subscription_usecase.dart';
 /// Página de Cancelamento - Etapa 2: Motivo do cancelamento
 class CancellationReasonPage extends StatefulWidget {
   final String subscriptionId;
-  final PixAutomaticSubscriptionStatus pixStatus;
+  final SubscriptionBillingStatus billingStatus;
+  final SubscriptionProvider provider;
 
   const CancellationReasonPage({
     super.key,
     required this.subscriptionId,
-    required this.pixStatus,
-  });
+    SubscriptionBillingStatus? billingStatus,
+    @Deprecated('Use billingStatus') SubscriptionBillingStatus? pixStatus,
+    this.provider = SubscriptionProvider.manual,
+  }) : billingStatus =
+            pixStatus ?? billingStatus ?? SubscriptionBillingStatus.none;
 
   @override
   State<CancellationReasonPage> createState() => _CancellationReasonPageState();
@@ -52,24 +55,13 @@ class _CancellationReasonPageState extends State<CancellationReasonPage> {
         : _selectedReason;
 
     try {
-      if (widget.pixStatus != PixAutomaticSubscriptionStatus.none) {
-        // Pix Automático: cancela a recorrência de verdade no Woovi antes de
-        // marcar a assinatura como cancelada.
-        await SupabaseConfig.client.functions.invoke(
-          'cancel-woovi-subscription',
-          body: {
-            'subscriptionId': widget.subscriptionId,
-            'reason': reason,
-          },
-        );
-      } else {
-        final result = await sl<CancelSubscriptionUseCase>()(
-          subscriptionId: widget.subscriptionId,
-          reason: reason,
-        );
-        final failure = result.fold((f) => f, (_) => null);
-        if (failure != null) throw Exception(failure.message);
-      }
+      final result = await sl<CancelSubscriptionUseCase>()(
+        subscriptionId: widget.subscriptionId,
+        reason: reason,
+        provider: widget.provider,
+      );
+      final failure = result.fold((f) => f, (_) => null);
+      if (failure != null) throw Exception(failure.message);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

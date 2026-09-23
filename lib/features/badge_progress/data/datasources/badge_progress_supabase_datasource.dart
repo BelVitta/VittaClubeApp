@@ -11,11 +11,22 @@ class BadgeProgressSupabaseDataSource {
 
   Future<BadgeProgressModel> getProgress(String userId) async {
     try {
-      final data = await _supabase
-          .from('badge_progress')
-          .select('user_id, current_badge_level, consultation_count, referral_count, plan_activation_date, has_annual_plan, profiles(member_since)')
-          .eq('user_id', userId)
-          .maybeSingle();
+      Map<String, dynamic>? data;
+      try {
+        data = await _supabase
+            .from('badge_progress')
+            .select(
+                'user_id, current_badge_level, consultation_count, referral_count, plan_activation_date, has_annual_plan, paid_months, profiles(member_since)')
+            .eq('user_id', userId)
+            .maybeSingle();
+      } catch (_) {
+        data = await _supabase
+            .from('badge_progress')
+            .select(
+                'user_id, current_badge_level, consultation_count, referral_count, plan_activation_date, has_annual_plan, profiles(member_since)')
+            .eq('user_id', userId)
+            .maybeSingle();
+      }
 
       if (data == null) {
         final profile = await _supabase
@@ -29,9 +40,10 @@ class BadgeProgressSupabaseDataSource {
           consultationCount: 0,
           referralCount: 0,
           memberSince: DateTime.parse(profile['member_since'] as String),
+          requiredMonthsByLevel: await _requiredMonthsByLevel(),
         );
       }
-      return _fromRow(data);
+      return _fromRow(data, await _requiredMonthsByLevel());
     } catch (e) {
       throw ServerException(message: 'Erro ao buscar progresso: $e');
     }
@@ -49,13 +61,10 @@ class BadgeProgressSupabaseDataSource {
         newLevel = 'prata';
       }
       if (newLevel != progress.currentBadgeLevel) {
-        await _supabase
-            .from('badge_progress')
-            .update({
-              'current_badge_level': newLevel,
-              'last_upgrade_at': DateTime.now().toIso8601String(),
-            })
-            .eq('user_id', userId);
+        await _supabase.from('badge_progress').update({
+          'current_badge_level': newLevel,
+          'last_upgrade_at': DateTime.now().toIso8601String(),
+        }).eq('user_id', userId);
         await _supabase
             .from('subscriptions')
             .update({'badge_level': newLevel})
@@ -70,25 +79,31 @@ class BadgeProgressSupabaseDataSource {
 
   Future<BadgeProgressModel> updateProgress(BadgeProgressModel progress) async {
     try {
-      await _supabase
-          .from('badge_progress')
-          .upsert({
-            'user_id': progress.userId,
-            'current_badge_level': progress.currentBadgeLevel,
-            'consultation_count': progress.consultationCount,
-            'referral_count': progress.referralCount,
-            'plan_activation_date':
-                progress.planActivationDate?.toIso8601String(),
-            'has_annual_plan': progress.hasAnnualPlan,
-          })
-          .eq('user_id', progress.userId);
+      await _supabase.from('badge_progress').upsert({
+        'user_id': progress.userId,
+        'current_badge_level': progress.currentBadgeLevel,
+        'consultation_count': progress.consultationCount,
+        'referral_count': progress.referralCount,
+        'plan_activation_date': progress.planActivationDate?.toIso8601String(),
+        'has_annual_plan': progress.hasAnnualPlan,
+      }).eq('user_id', progress.userId);
       return getProgress(progress.userId);
     } catch (e) {
       throw ServerException(message: 'Erro ao atualizar progresso: $e');
     }
   }
 
-  BadgeProgressModel _fromRow(Map<String, dynamic> e) {
+  Future<Map<String, int>> _requiredMonthsByLevel() async {
+    final rows =
+        await _supabase.from('badges').select('level_name, required_months');
+    return {
+      for (final row in rows)
+        row['level_name'] as String: row['required_months'] as int? ?? 0,
+    };
+  }
+
+  BadgeProgressModel _fromRow(
+      Map<String, dynamic> e, Map<String, int> requiredMonthsByLevel) {
     final memberSince =
         (e['profiles'] as Map<String, dynamic>?)?['member_since'] as String? ??
             DateTime.now().toIso8601String();
@@ -102,6 +117,8 @@ class BadgeProgressSupabaseDataSource {
           ? DateTime.parse(e['plan_activation_date'] as String)
           : null,
       hasAnnualPlan: e['has_annual_plan'] as bool? ?? false,
+      paidMonths: e['paid_months'] as int? ?? 0,
+      requiredMonthsByLevel: requiredMonthsByLevel,
     );
   }
 }

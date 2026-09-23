@@ -16,7 +16,7 @@ class SubscriptionStatusCards extends StatelessWidget {
     VoidCallback? onRestore,
   }) {
     if (subscription == null ||
-        subscription.pixStatus == PixAutomaticSubscriptionStatus.none) {
+        subscription.billingStatus == SubscriptionBillingStatus.none) {
       return _StatusCard(
         title: 'Assine o VittaClube',
         message:
@@ -26,12 +26,13 @@ class SubscriptionStatusCards extends StatelessWidget {
       );
     }
 
-    switch (subscription.pixStatus) {
-      case PixAutomaticSubscriptionStatus.waitingAuthorization:
+    switch (subscription.billingStatus) {
+      case SubscriptionBillingStatus.waitingAuthorization:
         return _StatusCard(
           title: 'Aguardando confirmação do seu banco',
-          message:
-              'Você já iniciou a autorização Pix Automático. Volte ao app do banco para aprovar ou atualize o status.',
+          message: subscription.provider == SubscriptionProvider.mercadoPago
+              ? 'O cartão foi tokenizado. Aguardamos a confirmação da primeira cobrança para liberar os benefícios.'
+              : 'Você já iniciou a autorização Pix Automático. Volte ao app do banco para aprovar ou atualize o status.',
           actionText: subscription.paymentLinkUrl == null
               ? 'Atualizar status'
               : 'Abrir banco',
@@ -40,23 +41,24 @@ class SubscriptionStatusCards extends StatelessWidget {
           secondaryText: 'Atualizar status',
           onSecondary: onRefresh,
         );
-      case PixAutomaticSubscriptionStatus.active:
+      case SubscriptionBillingStatus.active:
         return _StatusCard(
           title: 'Assinatura ativa',
           message:
               'Seu VittaClube está ativo. Valor: R\$34,90/mês. Próxima cobrança: ${_date(subscription.nextBillingDate)}.',
           actionText: 'Ver benefícios',
         );
-      case PixAutomaticSubscriptionStatus.paymentPending:
+      case SubscriptionBillingStatus.paymentPending:
         return _StatusCard(
           title: 'Pagamento pendente',
-          message:
-              'Não conseguimos cobrar sua mensalidade. O banco fará novas tentativas automáticas por até 7 dias. Seu acesso permanece ativo durante a recuperação.',
+          message: subscription.provider == SubscriptionProvider.mercadoPago
+              ? 'Não conseguimos confirmar a nova mensalidade. Seu acesso permanece ativo somente até o fim do período já pago.'
+              : 'Não conseguimos cobrar sua mensalidade. O banco fará novas tentativas automáticas por até 7 dias. Seu acesso permanece ativo durante a recuperação.',
           actionText: 'Atualizar status',
           onAction: onRefresh,
         );
-      case PixAutomaticSubscriptionStatus.blocked:
-      case PixAutomaticSubscriptionStatus.expired:
+      case SubscriptionBillingStatus.blocked:
+      case SubscriptionBillingStatus.expired:
         return _StatusCard(
           title: 'Conta bloqueada',
           message:
@@ -65,16 +67,16 @@ class SubscriptionStatusCards extends StatelessWidget {
           onAction: onRestore,
           isDanger: true,
         );
-      case PixAutomaticSubscriptionStatus.rejected:
+      case SubscriptionBillingStatus.rejected:
         return _StatusCard(
           title: 'Autorização não concluída',
           message:
-              'A autorização Pix Automático foi recusada ou não finalizada no banco.',
+              'A cobrança ou autorização foi recusada e os benefícios não foram liberados.',
           actionText: 'Tentar novamente',
           onAction: onSubscribe,
           isDanger: true,
         );
-      case PixAutomaticSubscriptionStatus.cancelled:
+      case SubscriptionBillingStatus.cancelled:
         return _StatusCard(
           title: 'Assinatura cancelada',
           message:
@@ -82,7 +84,7 @@ class SubscriptionStatusCards extends StatelessWidget {
           actionText: 'Reativar assinatura',
           onAction: onSubscribe,
         );
-      case PixAutomaticSubscriptionStatus.none:
+      case SubscriptionBillingStatus.none:
         return _StatusCard(
           title: 'Assine o VittaClube',
           message:

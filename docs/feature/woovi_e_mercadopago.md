@@ -60,12 +60,13 @@ Pix Automático em sandbox: [documentação](https://developers.woovi.com/docs/t
 | `woovi-webhook` | HMAC + idempotência + status da assinatura |
 | `reconcile-woovi-subscription` | Consulta a Woovi se o webhook falhar |
 | `cancel-woovi-subscription` | Já chamado ao cancelar plano Pix Automático |
-| `BillingProfilePage` / `PixAutomaticExplanationPage` | Telas existem, **checkout não navega até elas** |
-| Botão PIX em `PaymentPage` | Mock / bloqueado em prod — **não chama a Woovi** |
-| Secrets no `supabase_push_*.sh` | Só InfinitePay; **Woovi ainda não** |
-| `woovi-webhook` sem JWT | Falta `verify_jwt = false` (hoje só o da InfinitePay tem) |
+| `BillingProfilePage` / `PixAutomaticExplanationPage` | Integradas ao checkout Pix Automático |
+| Botão PIX em `PaymentPage` | Chama `create-woovi-subscription` e abre o link bancário |
+| Secrets no `supabase_push_*.sh` | Configurados sem imprimir valores; preencher `supabase.env` |
+| `woovi-webhook` sem JWT | Publicado com `verify_jwt = false` e HMAC obrigatório |
 
-Configurar o painel **sozinho não libera o PIX no app**. Depois dos secrets, falta o fio no checkout (código).
+Configurar o painel **sozinho não libera o PIX no app**. Depois dos secrets, faça o
+deploy e valide o webhook no sandbox antes da produção.
 
 Fluxo alvo:
 
@@ -234,24 +235,30 @@ Valor da mensalidade **não** vem do app: a function usa `VITTACLUBE_SUBSCRIPTIO
 
 ---
 
-## 5. Código que ainda falta (Woovi no checkout)
+## 5. Fluxo Woovi já implementado no checkout
 
-Fazer depois dos secrets sandbox:
+Depois de configurar os secrets no sandbox:
 
-1. PIX em `PaymentPage` = fluxo Woovi (não mock / `UnimplementedPaymentGateway`).
-2. `createPixAutomaticSubscription` → `functions.invoke('create-woovi-subscription')` (hoje só insere linha local).
-3. Navegar: plano → `BillingProfilePage` → `PixAutomaticExplanationPage` → link do banco.
-4. Ao voltar: `refreshSubscriptionStatus` / `LoadCurrentSubscription`. Acesso só com status local `active` ou `payment_pending`.
-5. `verify_jwt = false` no `woovi-webhook` (config + script).
-6. `supabase_push_dev.sh` / `supabase_push_prod.sh` gravarem secrets Woovi (como já fazem com InfinitePay).
+1. PIX em `PaymentPage` chama `createPixAutomaticSubscription`, que invoca
+   `create-woovi-subscription`.
+2. Navegação: plano → `BillingProfilePage` → `PixAutomaticExplanationPage` →
+   link do banco.
+3. Ao voltar, `refreshSubscriptionStatus` consulta o provedor; acesso só com
+   status local `active` ou `payment_pending` dentro do período pago.
+4. `woovi-webhook` valida HMAC, enfileira eventos idempotentes e é processado
+   pela reconciliação agendada.
 
 Cancelamento Pix Automático **já** chama `cancel-woovi-subscription`.
 
 ---
 
-## 6. Mercado Pago — só cartão
+## 6. Mercado Pago — assinatura mensal no cartão
 
-[Assinaturas MP](https://www.mercadopago.com.br/developers/pt/docs/subscriptions/overview) (`/preapproval`) cobram de novo no **cartão tokenizado** (`card_token_id`). PIX no checkout do 1º ciclo **não** é débito Pix Automático nos meses seguintes.
+A integração usa um plano associado (`preapproval_plan` + `preapproval`). O cartão
+é tokenizado pelos Core Methods nativos no Android; PAN, validade e CVV não
+atravessam o MethodChannel nem são persistidos. O backend recebe somente
+`planId` e `cardTokenId` e não libera acesso até confirmar a primeira cobrança
+canônica como `approved`.
 
 No Vitta Clube:
 
@@ -260,39 +267,68 @@ No Vitta Clube:
 | PIX (recorrente) | Woovi Pix Automático |
 | Cartão | Mercado Pago |
 
-InfinitePay pode ficar no código até o 1º pagamento MP em sandbox confirmar; depois o botão cartão aponta só para o MP.
+O botão da InfinitePay não tem rota acessível. O código legado pode ser removido
+depois que criação, renovação, cancelamento e webhook forem comprovados em
+produção. No iOS, cartão permanece oculto até existir uma ponte nativa equivalente.
 
 ### 6.1 Conta MP
 
 1. Conta vendedor + aplicação em [Suas integrações](https://www.mercadopago.com.br/developers/panel/app).
-2. Credenciais **teste** (`TEST-…` / `APP_USR-…` de teste) vs **produção** — também **não misturar**.
-3. Access Token **somente** em secret de Edge Function (`MP_ACCESS_TOKEN`). Nunca no Flutter.
+2. Usar credenciais de teste em dev e credenciais de produção somente em prod.
+3. Access Token exclusivamente em `MERCADOPAGO_ACCESS_TOKEN`, nunca no app.
+4. Public Key correspondente ao ambiente em `MERCADOPAGO_PUBLIC_KEY` durante o build Android.
 
-### 6.2 Integração sugerida (Checkout Pro)
+### 6.2 Configuração do backend
 
-Igual ao redirect da InfinitePay:
+Copie `supabase.env.example` para `supabase.env` e preencha os quatro secrets do
+Mercado Pago. Os scripts de deploy configuram os valores sem imprimi-los e
+publicam todas as funções necessárias.
 
-1. Edge Function `create-mercadopago-preference` (JWT do usuário).
-2. Cria preferência com valor do plano, `external_reference` = `user_id` + `plan_id`.
-3. `back_urls` / deep link já existente: `vittaclube://payment/...`.
-4. Webhook `https://<REF>.supabase.co/functions/v1/mercadopago-webhook` com `verify_jwt = false`.
-5. Evento `payment` approved → grava `payments` e ativa `subscriptions` **sem** preencher `woovi_subscription_id`.
-6. `PaymentPage` cartão abre o `init_point` do MP, não a InfinitePay.
+Depois do deploy:
 
-Recorrência automática no **cartão** (cobrar todo mês sem o usuário voltar) é fase 2: Assinaturas MP com cartão salvo. O PIX mensal continua Woovi.
+1. Como administrador, invoque `create-mercadopago-plan` com o `planId` mensal.
+2. Configure no painel do Mercado Pago o webhook
+   `https://<REF>.supabase.co/functions/v1/mercadopago-webhook` para `payment`,
+   `subscription_authorized_payment`, `subscription_preapproval` e eventos de plano.
+3. Use o mesmo secret configurado em `MERCADOPAGO_WEBHOOK_SECRET`.
+4. Agende um POST a cada cinco minutos para
+   `https://<REF>.supabase.co/functions/v1/reconcile-mercadopago`, enviando
+   `x-cron-secret: <MERCADOPAGO_CRON_SECRET>`.
 
-### 6.3 Secrets MP
+O webhook valida `x-signature` e `x-request-id`, grava uma fila idempotente e
+responde imediatamente. A reconciliação consulta o recurso na API do Mercado
+Pago antes de alterar acesso, processa reajustes pendentes e bloqueia períodos
+pagos que venceram.
+
+### 6.3 Secrets e build Android
 
 Sandbox / teste:
 
 ```bash
 supabase secrets set \
-  MP_ACCESS_TOKEN="<token-teste>" \
-  MP_WEBHOOK_SECRET="<secret-webhook-teste>" \
-  MP_ENVIRONMENT=sandbox
+  MERCADOPAGO_ACCESS_TOKEN="<token-teste>" \
+  MERCADOPAGO_WEBHOOK_SECRET="<secret-webhook-teste>" \
+  MERCADOPAGO_RETURN_URL="https://<REF>.supabase.co/functions/v1/mercadopago-return" \
+  MERCADOPAGO_CRON_SECRET="<valor-aleatorio-forte>"
 ```
 
-Produção: tokens de produção no projeto prod.
+Uma URL própria não é necessária para homologação: a função pública
+`mercadopago-return` usa o domínio HTTPS do próprio Supabase. Quando
+`vittaclubefidelidade.com.br` estiver publicado com DNS e SSL, ele pode substituir
+essa URL.
+
+Compile o Android com a Public Key do mesmo ambiente:
+
+```bash
+MERCADOPAGO_PUBLIC_KEY="$MERCADOPAGO_PUBLIC_KEY" \
+flutter build appbundle --release \
+  --dart-define=MERCADOPAGO_PUBLIC_KEY="$MERCADOPAGO_PUBLIC_KEY"
+```
+
+O Core Methods exige Android API 23 ou superior; este projeto usa API 24 porque
+o plugin de testes Flutter atual também participa do build Android. Produção
+deve usar tokens e Public Key produtivos no projeto Supabase e no build
+produtivo, respectivamente.
 
 ---
 
@@ -302,12 +338,12 @@ Produção: tokens de produção no projeto prod.
 2. AppID + webhook sandbox → secrets no Supabase **dev**.
 3. Deploy functions; `woovi-webhook --no-verify-jwt`.
 4. `curl` em `create-woovi-subscription` + simular pagamento no painel.
-5. Código: ligar checkout PIX à function (passo 5 desta lista no código).
-6. Um fluxo no app staging: autorizar → `subscriptions.status = active` → QR libera.
-7. Conta **normal** Woovi + secrets **prod** + teste com Pix real.
-8. Mercado Pago teste: function + botão cartão.
-9. MP produção.
-10. Play Store só com `main_prod` + secrets prod.
+5. Um fluxo no app staging: autorizar → `subscriptions.status = active` → QR libera.
+6. Conta **normal** Woovi + secrets **prod** + teste com Pix real.
+7. Mercado Pago teste: criar o plano associado, tokenizar no Android e validar
+   aprovação, renovação, cancelamento e webhook.
+8. MP produção com Public Key/Access Token separados.
+9. Play Store só com `main_prod` + secrets prod.
 
 ---
 

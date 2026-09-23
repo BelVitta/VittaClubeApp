@@ -1,30 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../core/config/app_config.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/di/injection_container.dart';
-import '../../../../core/payment/infinitypay/infinitypay_checkout_service.dart';
-import '../../../../core/payment/infinitypay/infinitypay_models.dart';
-import '../../../../core/payment/payment_gateway.dart';
+import '../../../../core/payment/mercadopago/mercadopago_card_tokenization_service.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/input_formatters.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/legal_document_page.dart';
-import '../../../subscription/domain/usecases/activate_subscription_usecase.dart';
+import '../../../subscription/domain/entities/pix_automatic_models.dart';
+import '../../../subscription/domain/usecases/create_mercadopago_subscription_usecase.dart';
+import '../../../subscription/domain/usecases/create_pix_automatic_subscription_usecase.dart';
+import '../../../subscription/presentation/pages/billing_profile_page.dart';
+import '../../../subscription/presentation/pages/pix_automatic_explanation_page.dart';
 import '../../data/datasources/plans_supabase_datasource.dart';
-import 'infinitypay_pending_page.dart';
+import 'subscription_processing_page.dart';
 import '../widgets/payment_method_item.dart';
 import '../widgets/payment_summary_sheet.dart';
 
-/// `creditCard` é processado via checkout redirecionado da InfinitePay —
-/// não existe formulário próprio de cartão no app.
 enum PaymentMethod { creditCard, pix }
 
-/// Página de pagamento — Cartão de Crédito ou Pix.
-/// Persiste o resultado real em `payments` e ativa `subscriptions` ao aprovar.
+/// Cartão é tokenizado nos PCI Fields nativos do Mercado Pago em Android e
+/// iOS. Os dados sensíveis nunca atravessam o MethodChannel.
 class PaymentPage extends StatefulWidget {
   final RemotePlan selectedPlan;
 
@@ -38,11 +34,25 @@ class PaymentPage extends StatefulWidget {
 }
 
 class _PaymentPageState extends State<PaymentPage> {
-  PaymentMethod _selectedMethod = PaymentMethod.creditCard;
+  PaymentMethod _selectedMethod = PaymentMethod.pix;
+  bool _cardAvailable = false;
   bool _processing = false;
 
-  final _pixNameController = TextEditingController();
-  final _pixCpfController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _loadCardAvailability();
+  }
+
+  Future<void> _loadCardAvailability() async {
+    final available =
+        await sl<MercadoPagoCardTokenizationService>().isAvailable();
+    if (!mounted) return;
+    setState(() {
+      _cardAvailable = available;
+      if (available) _selectedMethod = PaymentMethod.creditCard;
+    });
+  }
 
   double get _total => widget.selectedPlan.price;
   String get _paymentMethodLabel {
@@ -50,15 +60,8 @@ class _PaymentPageState extends State<PaymentPage> {
       case PaymentMethod.creditCard:
         return 'Cartão de Crédito';
       case PaymentMethod.pix:
-        return 'Pix';
+        return 'Pix Automático';
     }
-  }
-
-  @override
-  void dispose() {
-    _pixNameController.dispose();
-    _pixCpfController.dispose();
-    super.dispose();
   }
 
   void _handlePay() {
@@ -86,220 +89,138 @@ class _PaymentPageState extends State<PaymentPage> {
 
   Future<void> _processPayment() async {
     if (_selectedMethod == PaymentMethod.creditCard) {
-      await _startInfinityPayCheckout();
+      await _startMercadoPagoSubscription();
       return;
     }
-
-    setState(() => _processing = true);
-
-    final gateway = sl<PaymentGateway>();
-    final activateUseCase = sl<ActivateSubscriptionUseCase>();
-
-    final request = PaymentRequest(
-      planId: widget.selectedPlan.id,
-      amount: widget.selectedPlan.price,
-      method: PaymentMethodType.pix,
-    );
-
-    try {
-      final result = await gateway.charge(request);
-      if (!mounted) return;
-
-      if (!result.approved) {
-        _showErrorDialog(result.errorMessage ?? 'Pagamento não aprovado.');
-        return;
-      }
-
-      final activation = await activateUseCase(
-        planId: widget.selectedPlan.id,
-        level: PlanLevelDb.bronze,
-      );
-
-      await activation.fold(
-        (failure) async {
-          if (!mounted) return;
-          _showErrorDialog(
-            'Pagamento aprovado, mas houve um erro ao ativar o plano. '
-            'Nosso suporte foi notificado. (${failure.message})',
-          );
-        },
-        (subscription) async {
-          await _recordPayment(
-            subscriptionId: subscription.id,
-            receiptNumber: result.receiptNumber!,
-            method: request.method,
-          );
-          if (!mounted) return;
-          _showSuccessDialog();
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showErrorDialog('Erro ao processar pagamento: $e');
-    } finally {
-      if (mounted) setState(() => _processing = false);
-    }
+    await _startPixAutomaticSubscription();
   }
 
-  Future<void> _startInfinityPayCheckout() async {
-    setState(() => _processing = true);
-
+  Future<PixAutomaticBillingProfile?> _collectBillingProfile() async {
+    PixAutomaticBillingProfile? initial;
     try {
-      final service = sl<InfinityPayCheckoutService>();
-      final appConfig = sl<AppConfig>();
-      if (service.handle.trim().isEmpty) {
-        _showErrorDialog(
-          'INFINITYPAY_HANDLE não configurado para este ambiente.',
-        );
-        return;
-      }
-
-      final orderNsu = _buildOrderNsu();
-      final amountCents = _priceInCents(widget.selectedPlan.price);
-      await _createInfinityPayIntent(
-        orderNsu: orderNsu,
-        amountCents: amountCents,
-      );
-
-      final response = await service.createCheckoutLink(
-        InfinityPayCreateLinkRequest(
-          handle: service.handle,
-          orderNsu: orderNsu,
-          redirectUrl: appConfig.resolvedInfinityPayRedirectUrl,
-          webhookUrl: appConfig.resolvedInfinityPayWebhookUrl.isEmpty
-              ? null
-              : appConfig.resolvedInfinityPayWebhookUrl,
-          items: [
-            InfinityPayItem(
-              description: 'Vitta Assinatura',
-              quantity: 1,
-              price: amountCents,
+      final userId = SupabaseConfig.client.auth.currentUser?.id;
+      if (userId != null) {
+        final row = await SupabaseConfig.client
+            .from('billing_profiles')
+            .select()
+            .eq('user_id', userId)
+            .maybeSingle();
+        if (row != null) {
+          initial = PixAutomaticBillingProfile(
+            name: row['name'] as String,
+            taxId: row['tax_id'] as String,
+            email: row['email'] as String,
+            phone: row['phone'] as String,
+            address: PixAutomaticBillingAddress(
+              zipcode: row['zipcode'] as String,
+              street: row['street'] as String,
+              number: row['number'] as String,
+              complement: row['complement'] as String?,
+              neighborhood: row['neighborhood'] as String,
+              city: row['city'] as String,
+              state: row['state'] as String,
             ),
-          ],
-        ),
-      );
+          );
+        }
+      }
+    } catch (_) {
+      // A tela permite completar os dados mesmo quando ainda não há perfil.
+    }
+    if (!mounted) return null;
+    return Navigator.of(context).push<PixAutomaticBillingProfile>(
+      MaterialPageRoute(
+          builder: (_) => BillingProfilePage(initialProfile: initial)),
+    );
+  }
 
-      if (!mounted) return;
-
-      if (response.checkoutUrl.isEmpty) {
-        _showErrorDialog('A InfinitePay não retornou o link de pagamento.');
+  Future<void> _startMercadoPagoSubscription() async {
+    if (!_cardAvailable) {
+      _showErrorDialog(
+          'Cartão não está configurado neste ambiente. Use o Pix Automático.');
+      return;
+    }
+    final profile = await _collectBillingProfile();
+    if (profile == null || !mounted) return;
+    setState(() => _processing = true);
+    try {
+      final tokenization = await sl<MercadoPagoCardTokenizationService>()
+          .openCardTokenization(payerName: profile.name, cpf: profile.taxId);
+      if (!mounted ||
+          tokenization.outcome == CardTokenizationOutcome.cancelled) {
         return;
       }
-
-      await _updateInfinityPayIntentCheckoutUrl(
-        orderNsu: orderNsu,
-        checkoutUrl: response.checkoutUrl,
-        slug: response.slug,
+      if (tokenization.outcome != CardTokenizationOutcome.success ||
+          tokenization.cardTokenId == null) {
+        _showErrorDialog(
+            tokenization.message ?? 'Não foi possível validar o cartão.');
+        return;
+      }
+      final result = await sl<CreateMercadoPagoSubscriptionUseCase>()(
+        CreateMercadoPagoSubscriptionParams(
+          planId: widget.selectedPlan.id,
+          cardTokenId: tokenization.cardTokenId!,
+        ),
       );
-
       if (!mounted) return;
-
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => InfinityPayPendingPage(
-            checkoutUrl: response.checkoutUrl,
-            orderNsu: orderNsu,
-            selectedPlan: widget.selectedPlan,
-            initialSlug: response.slug,
+      result.fold(
+        (failure) => _showErrorDialog(failure.message),
+        (subscription) => Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => SubscriptionProcessingPage(
+              subscriptionId: subscription.id,
+            ),
           ),
         ),
       );
-    } on InfinityPayCheckoutException catch (e) {
-      if (!mounted) return;
-      _showErrorDialog(e.message);
     } catch (e) {
       if (!mounted) return;
-      _showErrorDialog('Erro ao iniciar checkout InfinitePay: $e');
+      _showErrorDialog('Não foi possível iniciar a assinatura por cartão.');
     } finally {
       if (mounted) setState(() => _processing = false);
     }
   }
 
-  String _buildOrderNsu() {
-    final userId = SupabaseConfig.client.auth.currentUser?.id ?? 'guest';
-    final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
-    return 'vitta_${userId}_$timestamp';
-  }
-
-  int _priceInCents(double value) => (value * 100).round();
-
-  Future<void> _createInfinityPayIntent({
-    required String orderNsu,
-    required int amountCents,
-  }) async {
-    final supabase = SupabaseConfig.client;
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) {
-      throw StateError('Nenhum usuário autenticado para criar pagamento.');
-    }
-
-    await supabase.from('payment_intents').insert({
-      'user_id': userId,
-      'plan_id': widget.selectedPlan.id,
-      'provider': 'infinitypay',
-      'order_nsu': orderNsu,
-      'amount': widget.selectedPlan.price,
-      'amount_cents': amountCents,
-      'currency': 'BRL',
-      'status': 'pending',
-    });
-  }
-
-  Future<void> _updateInfinityPayIntentCheckoutUrl({
-    required String orderNsu,
-    required String checkoutUrl,
-    String? slug,
-  }) async {
-    await SupabaseConfig.client.from('payment_intents').update({
-      'checkout_url': checkoutUrl,
-      if (slug != null) 'slug': slug,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('order_nsu', orderNsu);
-  }
-
-  Future<void> _recordPayment({
-    required String subscriptionId,
-    required String receiptNumber,
-    required PaymentMethodType method,
-  }) async {
-    final SupabaseClient supabase = SupabaseConfig.client;
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) return;
-
-    await supabase.from('payments').insert({
-      'user_id': userId,
-      'subscription_id': subscriptionId,
-      'amount': widget.selectedPlan.price,
-      'method': method.dbValue,
-      'status': 'aprovado',
-      'receipt_number': receiptNumber,
-      'paid_at': DateTime.now().toUtc().toIso8601String(),
-    });
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Plano ativado!'),
-        content: Text(
-          'Seu plano ${widget.selectedPlan.subscriptionType.displayName} '
-          'está ativo. Aproveite todos os benefícios!',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // close dialog
-              // Volta para a primeira rota (home) — SubscriptionBloc recarrega.
-              Navigator.of(context).popUntil((r) => r.isFirst);
-            },
-            child: const Text('Ir para o início'),
+  Future<void> _startPixAutomaticSubscription() async {
+    final profile = await _collectBillingProfile();
+    if (profile == null || !mounted) return;
+    setState(() => _processing = true);
+    try {
+      final result = await sl<CreatePixAutomaticSubscriptionUseCase>()(
+        CreatePixAutomaticSubscriptionParams(
+          planId: widget.selectedPlan.id,
+          customer: PixAutomaticCustomer(
+            name: profile.name,
+            taxId: profile.taxId,
+            email: profile.email,
+            phone: profile.phone,
+            address: profile.address,
           ),
-        ],
-      ),
-    );
+        ),
+      );
+      if (!mounted) return;
+      result.fold(
+        (failure) => _showErrorDialog(failure.message),
+        (subscription) => Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => PixAutomaticExplanationPage(
+              paymentLinkUrl: subscription.paymentLinkUrl,
+              onConfirmWithoutLink: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => SubscriptionProcessingPage(
+                    subscriptionId: subscription.id,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      _showErrorDialog('Não foi possível iniciar o Pix Automático.');
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
   }
 
   void _showErrorDialog(String message) {
@@ -410,7 +331,7 @@ class _PaymentPageState extends State<PaymentPage> {
               left: 24,
               right: 24,
               child: PrimaryButton(
-                text: _processing ? 'Processando...' : 'Pagar',
+                text: _processing ? 'Processando...' : 'Assinar',
                 onPressed: _processing ? null : _handlePay,
               ),
             ),
@@ -448,7 +369,7 @@ class _PaymentPageState extends State<PaymentPage> {
               'R\$ ${widget.selectedPlan.price.toStringAsFixed(2).replaceAll('.', ',')}'),
           const SizedBox(height: 10),
           _buildSummaryRow(
-            'Total',
+            'Total mensal',
             'R\$ ${_total.toStringAsFixed(2).replaceAll('.', ',')}',
             highlight: true,
           ),
@@ -496,16 +417,18 @@ class _PaymentPageState extends State<PaymentPage> {
           ),
         ),
         const SizedBox(height: 6),
+        if (_cardAvailable) ...[
+          PaymentMethodItem(
+            title: 'Cartão de Crédito',
+            isSelected: _selectedMethod == PaymentMethod.creditCard,
+            onTap: () =>
+                setState(() => _selectedMethod = PaymentMethod.creditCard),
+            trailing: _buildCardBrands(),
+          ),
+          const SizedBox(height: 6),
+        ],
         PaymentMethodItem(
-          title: 'Cartão de Crédito',
-          isSelected: _selectedMethod == PaymentMethod.creditCard,
-          onTap: () =>
-              setState(() => _selectedMethod = PaymentMethod.creditCard),
-          trailing: _buildCardBrands(),
-        ),
-        const SizedBox(height: 6),
-        PaymentMethodItem(
-          title: 'Pix',
+          title: 'Pix Automático',
           isSelected: _selectedMethod == PaymentMethod.pix,
           onTap: () => setState(() => _selectedMethod = PaymentMethod.pix),
           trailing: _buildPixIcon(),
@@ -602,27 +525,9 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Widget _buildPixForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildFormField(
-          label: 'Nome do Pagador',
-          hint: 'Nome Completo',
-          controller: _pixNameController,
-        ),
-        const SizedBox(height: 6),
-        _buildFormField(
-          label: 'CPF',
-          hint: '___.___.___-__',
-          controller: _pixCpfController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(11),
-            CpfInputFormatter(),
-          ],
-        ),
-      ],
+    return Text(
+      'Cadastre seus dados de cobrança e autorize a mensalidade recorrente no app do seu banco.',
+      style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF6D7F95)),
     );
   }
 
@@ -638,66 +543,13 @@ class _PaymentPageState extends State<PaymentPage> {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Você será direcionado para o checkout seguro da InfinitePay para '
-            'pagar com cartão ou carteira digital.',
+            'Os dados do cartão serão digitados nos campos PCI nativos do Mercado Pago. '
+            'O VittaClube recebe somente um token temporário e aguarda a primeira cobrança aprovada.',
             style: GoogleFonts.outfit(
               fontSize: 13,
               fontWeight: FontWeight.w400,
               color: const Color(0xFF6D7F95),
               height: 1.35,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFormField({
-    required String label,
-    required String hint,
-    required TextEditingController controller,
-    TextInputType? keyboardType,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.primaryColor,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFFCFCFC),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFDDDFE5)),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            inputFormatters: inputFormatters,
-            style: GoogleFonts.outfit(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: AppTheme.primaryColor,
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF6D7F95).withValues(alpha: 0.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
-              ),
-              border: InputBorder.none,
             ),
           ),
         ),

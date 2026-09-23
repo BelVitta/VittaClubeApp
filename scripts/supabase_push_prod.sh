@@ -38,6 +38,35 @@ if [[ -n "${INFINITYPAY_CHECKOUT_API_URL:-}" ]]; then
   supabase secrets set "INFINITYPAY_CHECKOUT_API_URL=${INFINITYPAY_CHECKOUT_API_URL}"
 fi
 
+if [[ -n "${MERCADOPAGO_ACCESS_TOKEN:-}" && -n "${MERCADOPAGO_WEBHOOK_SECRET:-}" && -n "${MERCADOPAGO_RETURN_URL:-}" ]]; then
+  echo "Setting Mercado Pago Edge Function secrets"
+  supabase secrets set \
+    "MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN}" \
+    "MERCADOPAGO_WEBHOOK_SECRET=${MERCADOPAGO_WEBHOOK_SECRET}" \
+    "MERCADOPAGO_RETURN_URL=${MERCADOPAGO_RETURN_URL}"
+  if [[ -n "${MERCADOPAGO_CRON_SECRET:-}" ]]; then
+    supabase secrets set "MERCADOPAGO_CRON_SECRET=${MERCADOPAGO_CRON_SECRET}"
+  fi
+  if [[ -n "${MERCADOPAGO_API_URL:-}" ]]; then
+    supabase secrets set "MERCADOPAGO_API_URL=${MERCADOPAGO_API_URL}"
+  fi
+fi
+
+woovi_prod_app_id="${WOOVI_PROD_APP_ID:-${WOOVI_APP_ID:-}}"
+woovi_prod_webhook_secret="${WOOVI_PROD_WEBHOOK_SECRET:-${WOOVI_WEBHOOK_SECRET:-}}"
+if [[ -n "${woovi_prod_app_id}" && -n "${woovi_prod_webhook_secret}" ]]; then
+  echo "Setting Woovi Pix Automático secrets"
+  supabase secrets set \
+    "WOOVI_ENVIRONMENT=${WOOVI_PROD_ENVIRONMENT:-production}" \
+    "WOOVI_BASE_URL=${WOOVI_PROD_BASE_URL:-https://api.woovi.com}" \
+    "WOOVI_APP_ID=${woovi_prod_app_id}" \
+    "WOOVI_WEBHOOK_SECRET=${woovi_prod_webhook_secret}" \
+    "VITTACLUBE_SUBSCRIPTION_VALUE_CENTS=${VITTACLUBE_SUBSCRIPTION_VALUE_CENTS:-3490}" \
+    "VITTACLUBE_SUBSCRIPTION_INTERVAL=${VITTACLUBE_SUBSCRIPTION_INTERVAL:-MONTHLY}" \
+    "VITTACLUBE_SUBSCRIPTION_JOURNEY=${VITTACLUBE_SUBSCRIPTION_JOURNEY:-PAYMENT_ON_APPROVAL}" \
+    "VITTACLUBE_RETRY_POLICY=${VITTACLUBE_RETRY_POLICY:-THREE_RETRIES_7_DAYS}"
+fi
+
 if [[ -z "${FCM_SERVICE_ACCOUNT_JSON:-}" && -n "${FCM_SERVICE_ACCOUNT_JSON_FILE:-}" && -f "${FCM_SERVICE_ACCOUNT_JSON_FILE}" ]]; then
   FCM_SERVICE_ACCOUNT_JSON="$(cat "${FCM_SERVICE_ACCOUNT_JSON_FILE}")"
 fi
@@ -76,6 +105,15 @@ supabase functions deploy create-woovi-subscription
 supabase functions deploy woovi-webhook
 supabase functions deploy reconcile-woovi-subscription
 supabase functions deploy cancel-woovi-subscription
+supabase functions deploy create-mercadopago-plan
+supabase functions deploy create-mercadopago-subscription
+supabase functions deploy cancel-mercadopago-subscription
+supabase functions deploy reconcile-mercadopago-subscription
+supabase functions deploy update-mercadopago-plan-price
+supabase functions deploy cancel-local-subscription
+supabase functions deploy mercadopago-webhook --no-verify-jwt
+supabase functions deploy mercadopago-return --no-verify-jwt
+supabase functions deploy reconcile-mercadopago --no-verify-jwt
 supabase functions deploy infinitypay-webhook --no-verify-jwt
 supabase functions deploy infinitypay-return --no-verify-jwt
 supabase functions deploy send-push-campaign

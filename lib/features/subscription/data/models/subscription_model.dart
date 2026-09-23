@@ -11,7 +11,8 @@ class SubscriptionModel extends SubscriptionEntity {
     super.expirationDate,
     required super.isCurrent,
     super.cancelledAt,
-    super.pixStatus,
+    super.billingStatus,
+    super.provider,
     super.paymentAccessStatus,
     super.paymentLinkUrl,
     super.nextBillingDate,
@@ -32,9 +33,10 @@ class SubscriptionModel extends SubscriptionEntity {
       cancelledAt: json['cancelled_at'] == null
           ? null
           : DateTime.parse(json['cancelled_at'] as String),
-      pixStatus: pixAutomaticSubscriptionStatusFromDb(
-        json['pix_status'] as String?,
+      billingStatus: subscriptionBillingStatusFromDb(
+        (json['status'] ?? json['pix_status']) as String?,
       ),
+      provider: subscriptionProviderFromDb(json['payment_provider'] as String?),
       paymentAccessStatus: paymentAccessStatusFromDb(
         json['payment_access_status'] as String?,
       ),

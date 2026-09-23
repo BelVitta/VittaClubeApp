@@ -1,4 +1,4 @@
-enum PixAutomaticSubscriptionStatus {
+enum SubscriptionBillingStatus {
   none,
   waitingAuthorization,
   active,
@@ -9,52 +9,81 @@ enum PixAutomaticSubscriptionStatus {
   expired,
 }
 
-extension PixAutomaticSubscriptionStatusDb on PixAutomaticSubscriptionStatus {
+extension SubscriptionBillingStatusDb on SubscriptionBillingStatus {
   String get dbValue {
     switch (this) {
-      case PixAutomaticSubscriptionStatus.none:
+      case SubscriptionBillingStatus.none:
         return 'none';
-      case PixAutomaticSubscriptionStatus.waitingAuthorization:
+      case SubscriptionBillingStatus.waitingAuthorization:
         return 'waiting_authorization';
-      case PixAutomaticSubscriptionStatus.active:
+      case SubscriptionBillingStatus.active:
         return 'active';
-      case PixAutomaticSubscriptionStatus.paymentPending:
+      case SubscriptionBillingStatus.paymentPending:
         return 'payment_pending';
-      case PixAutomaticSubscriptionStatus.blocked:
+      case SubscriptionBillingStatus.blocked:
         return 'blocked';
-      case PixAutomaticSubscriptionStatus.rejected:
+      case SubscriptionBillingStatus.rejected:
         return 'rejected';
-      case PixAutomaticSubscriptionStatus.cancelled:
+      case SubscriptionBillingStatus.cancelled:
         return 'cancelled';
-      case PixAutomaticSubscriptionStatus.expired:
+      case SubscriptionBillingStatus.expired:
         return 'expired';
     }
   }
 }
 
-PixAutomaticSubscriptionStatus pixAutomaticSubscriptionStatusFromDb(
+SubscriptionBillingStatus subscriptionBillingStatusFromDb(
   String? raw,
 ) {
   switch (raw) {
     case 'waiting_authorization':
-      return PixAutomaticSubscriptionStatus.waitingAuthorization;
+      return SubscriptionBillingStatus.waitingAuthorization;
     case 'active':
-      return PixAutomaticSubscriptionStatus.active;
+      return SubscriptionBillingStatus.active;
     case 'payment_pending':
-      return PixAutomaticSubscriptionStatus.paymentPending;
+      return SubscriptionBillingStatus.paymentPending;
     case 'blocked':
-      return PixAutomaticSubscriptionStatus.blocked;
+      return SubscriptionBillingStatus.blocked;
     case 'rejected':
-      return PixAutomaticSubscriptionStatus.rejected;
+      return SubscriptionBillingStatus.rejected;
     case 'cancelled':
-      return PixAutomaticSubscriptionStatus.cancelled;
+      return SubscriptionBillingStatus.cancelled;
     case 'expired':
-      return PixAutomaticSubscriptionStatus.expired;
+      return SubscriptionBillingStatus.expired;
     case 'none':
     default:
-      return PixAutomaticSubscriptionStatus.none;
+      return SubscriptionBillingStatus.none;
   }
 }
+
+/// Provedor externo responsável pela recorrência. O valor legado continua
+/// explícito para permitir rollout sem reativar a rota da InfinitePay.
+enum SubscriptionProvider { mercadoPago, woovi, infinityPayLegacy, manual }
+
+extension SubscriptionProviderDb on SubscriptionProvider {
+  String get dbValue => switch (this) {
+        SubscriptionProvider.mercadoPago => 'mercado_pago',
+        SubscriptionProvider.woovi => 'woovi',
+        SubscriptionProvider.infinityPayLegacy => 'infinitypay_legacy',
+        SubscriptionProvider.manual => 'manual',
+      };
+}
+
+SubscriptionProvider subscriptionProviderFromDb(String? raw) => switch (raw) {
+      'mercado_pago' => SubscriptionProvider.mercadoPago,
+      'woovi' => SubscriptionProvider.woovi,
+      'infinitypay_legacy' ||
+      'infinitypay' =>
+        SubscriptionProvider.infinityPayLegacy,
+      _ => SubscriptionProvider.manual,
+    };
+
+@Deprecated('Use SubscriptionBillingStatus. Mantido para compatibilidade.')
+typedef PixAutomaticSubscriptionStatus = SubscriptionBillingStatus;
+
+@Deprecated('Use subscriptionBillingStatusFromDb.')
+SubscriptionBillingStatus pixAutomaticSubscriptionStatusFromDb(String? raw) =>
+    subscriptionBillingStatusFromDb(raw);
 
 enum PaymentAccessStatus {
   allowed,

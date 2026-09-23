@@ -1,7 +1,7 @@
 import '../entities/subscription_status.dart';
 
 class SubscriptionAccessPolicy {
-  final PixAutomaticSubscriptionStatus status;
+  final SubscriptionBillingStatus status;
   final PaymentAccessStatus accessStatus;
   final DateTime? currentPeriodEnd;
   final DateTime? now;
@@ -14,17 +14,18 @@ class SubscriptionAccessPolicy {
   });
 
   bool get canAccessBenefits {
-    if (status == PixAutomaticSubscriptionStatus.active) {
-      return accessStatus == PaymentAccessStatus.allowed;
+    if (status == SubscriptionBillingStatus.active) {
+      return accessStatus == PaymentAccessStatus.allowed && _hasPaidPeriod;
     }
 
-    if (status == PixAutomaticSubscriptionStatus.paymentPending) {
-      return accessStatus == PaymentAccessStatus.warningPending ||
-          accessStatus == PaymentAccessStatus.allowed;
+    if (status == SubscriptionBillingStatus.paymentPending) {
+      return _hasPaidPeriod &&
+          (accessStatus == PaymentAccessStatus.warningPending ||
+              accessStatus == PaymentAccessStatus.allowed);
     }
 
-    if (status == PixAutomaticSubscriptionStatus.cancelled) {
-      return _hasPaidPeriod;
+    if (status == SubscriptionBillingStatus.cancelled) {
+      return accessStatus == PaymentAccessStatus.allowed && _hasPaidPeriod;
     }
 
     return false;
@@ -33,7 +34,7 @@ class SubscriptionAccessPolicy {
   bool get canUseQr => canAccessBenefits;
 
   bool get mustShowPendingWarning =>
-      status == PixAutomaticSubscriptionStatus.paymentPending &&
+      status == SubscriptionBillingStatus.paymentPending &&
       accessStatus == PaymentAccessStatus.warningPending;
 
   bool get mustShowRestoreAccount => !canAccessBenefits;
@@ -42,10 +43,6 @@ class SubscriptionAccessPolicy {
     final end = currentPeriodEnd;
     if (end == null) return false;
     final reference = now ?? DateTime.now();
-    return end.isAfter(reference) || _sameDate(end, reference);
-  }
-
-  bool _sameDate(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    return end.isAfter(reference);
   }
 }

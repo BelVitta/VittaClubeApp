@@ -43,7 +43,7 @@ class _PlansListView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Plano salvo com sucesso!',
+                'Plano salvo. Reajustes são concluídos em segundo plano.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13),
               ),
               backgroundColor: AppTheme.successColor,
@@ -136,9 +136,7 @@ class _PlansListView extends StatelessWidget {
                             ),
                           ).then((result) {
                             if (result == true && context.mounted) {
-                              context
-                                  .read<PlanAdminBloc>()
-                                  .add(LoadPlans());
+                              context.read<PlanAdminBloc>().add(LoadPlans());
                             }
                           });
                         },

@@ -126,7 +126,7 @@ class _BillingProfilePageState extends State<BillingProfilePage> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
             children: [
               Text(
-                'Esses dados são obrigatórios para criar o Pix Automático.',
+                'Confirme seus dados de cobrança antes de continuar.',
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   color: const Color(0xFF6D7F95),

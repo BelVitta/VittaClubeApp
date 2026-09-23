@@ -31,6 +31,8 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
   late final TextEditingController _sortOrderController;
   late final TextEditingController _discountController;
   late final TextEditingController _maxConsultationsController;
+  late final TextEditingController _requiredMonthsController;
+  late final TextEditingController _annualDrawLimitController;
 
   bool get _isEditing => widget.entity != null;
 
@@ -66,6 +68,12 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
           ? widget.entity!.maxConsultationsPerMonth.toString()
           : '',
     );
+    _requiredMonthsController = TextEditingController(
+      text: widget.entity?.requiredMonths.toString() ?? '',
+    );
+    _annualDrawLimitController = TextEditingController(
+      text: widget.entity?.annualDrawLimit.toString() ?? '',
+    );
   }
 
   @override
@@ -78,6 +86,8 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
     _sortOrderController.dispose();
     _discountController.dispose();
     _maxConsultationsController.dispose();
+    _requiredMonthsController.dispose();
+    _annualDrawLimitController.dispose();
     super.dispose();
   }
 
@@ -94,10 +104,12 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
           int.tryParse(_progressBgColorController.text.trim(), radix: 16) ??
               0xFF2C4156,
       sortOrder: int.tryParse(_sortOrderController.text.trim()) ?? 0,
-      discountPercentage:
-          double.tryParse(_discountController.text.trim()) ?? 0,
+      discountPercentage: double.tryParse(_discountController.text.trim()) ?? 0,
       maxConsultationsPerMonth:
           int.tryParse(_maxConsultationsController.text.trim()) ?? 0,
+      requiredMonths: int.tryParse(_requiredMonthsController.text.trim()) ?? 0,
+      annualDrawLimit:
+          int.tryParse(_annualDrawLimitController.text.trim()) ?? 0,
     );
 
     if (_isEditing) {
@@ -201,14 +213,12 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
                           margin: const EdgeInsets.only(right: 8),
                           decoration: BoxDecoration(
                             color: Color(
-                              int.tryParse(
-                                      _progressColorController.text.trim(),
+                              int.tryParse(_progressColorController.text.trim(),
                                       radix: 16) ??
                                   0xFF2C4156,
                             ),
                             borderRadius: BorderRadius.circular(8),
-                            border:
-                                Border.all(color: const Color(0xFFDDDFE5)),
+                            border: Border.all(color: const Color(0xFFDDDFE5)),
                           ),
                         ),
                       ],
@@ -273,8 +283,7 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
                                   0xFF2C4156,
                             ),
                             borderRadius: BorderRadius.circular(8),
-                            border:
-                                Border.all(color: const Color(0xFFDDDFE5)),
+                            border: Border.all(color: const Color(0xFFDDDFE5)),
                           ),
                         ),
                       ],
@@ -288,7 +297,8 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
               AdminFormField(
                 label: 'Desconto (%)',
                 controller: _discountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
 
@@ -296,6 +306,20 @@ class _AdminBadgeFormPageState extends State<AdminBadgeFormPage> {
               AdminFormField(
                 label: 'Consultas/Mês',
                 controller: _maxConsultationsController,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+
+              AdminFormField(
+                label: 'Meses pagos para alcançar a patente',
+                controller: _requiredMonthsController,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+
+              AdminFormField(
+                label: 'Sorteios por ano (-1 = todos)',
+                controller: _annualDrawLimitController,
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),

@@ -1,6 +1,6 @@
 /// Enum que representa os tipos de assinatura disponíveis
 enum SubscriptionType {
-  monthly('Mensal', 34.99, null),
+  monthly('Mensal', 34.90, null),
   semiannual('Semestral', 29.99, '30% Off'),
   annual('Anual', 29.99, null);
 

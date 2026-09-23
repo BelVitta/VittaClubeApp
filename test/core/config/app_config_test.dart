@@ -6,14 +6,14 @@ void main() {
   // AppConfig usa singleton, precisamos testar cada init separadamente
 
   group('AppConfig', () {
-    test('initDev configura mock data e ambiente dev', () {
+    test('initDev configura o ambiente dev sem catálogo fixo', () {
       AppConfig.initDev();
       final config = AppConfig.instance;
 
       expect(config.isDev, isTrue);
       expect(config.isStaging, isFalse);
       expect(config.isProd, isFalse);
-      expect(config.useMockData, isTrue);
+      expect(config.useMockData, isFalse);
       expect(config.useSupabase, isFalse);
       expect(config.appName, 'Vita Clube Dev');
     });

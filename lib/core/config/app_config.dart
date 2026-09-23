@@ -37,13 +37,19 @@ class AppConfig {
 
   static bool get isInitialized => _instance != null;
 
-  /// Dev: dados mock, sem Supabase
+  /// Dev: usa o projeto Supabase de desenvolvimento informado no build.
   static void initDev() {
     _instance = AppConfig._(
       environment: Environment.dev,
       appName: 'Vita Clube Dev',
-      supabaseUrl: '',
-      supabaseAnonKey: '',
+      supabaseUrl: const String.fromEnvironment(
+        'SUPABASE_URL',
+        defaultValue: '',
+      ),
+      supabaseAnonKey: const String.fromEnvironment(
+        'SUPABASE_ANON_KEY',
+        defaultValue: '',
+      ),
       infinityPayHandle: const String.fromEnvironment(
         'INFINITYPAY_HANDLE',
         defaultValue: 'vinicius-belchior-car',
@@ -56,7 +62,7 @@ class AppConfig {
         'INFINITYPAY_WEBHOOK_URL',
         defaultValue: '',
       ),
-      useMockData: true,
+      useMockData: false,
     );
   }
 

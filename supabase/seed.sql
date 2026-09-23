@@ -23,21 +23,19 @@
 -- ------------------------------------------------------------
 INSERT INTO public.plans (id, name, subscription_type, price, discount_label, is_active)
 VALUES
-    ('11111111-1111-1111-1111-111111111101', 'Vita Clube Mensal',     'mensal',     34.99, NULL,       TRUE),
-    ('11111111-1111-1111-1111-111111111102', 'Vita Clube Semestral',  'semestral',  29.99, '30% Off',  TRUE),
-    ('11111111-1111-1111-1111-111111111103', 'Vita Clube Anual',      'anual',      29.99, 'Melhor escolha', TRUE)
+    ('11111111-1111-1111-1111-111111111101', 'Vita Clube Mensal',     'mensal',     34.90, NULL,       TRUE),
+    ('11111111-1111-1111-1111-111111111102', 'Vita Clube Semestral',  'semestral',  29.99, '30% Off',  FALSE),
+    ('11111111-1111-1111-1111-111111111103', 'Vita Clube Anual',      'anual',      29.99, 'Melhor escolha', FALSE)
 ON CONFLICT (id) DO NOTHING;
 
 -- ------------------------------------------------------------
 -- 2. Benefícios dos planos
 -- ------------------------------------------------------------
 INSERT INTO public.plan_benefits (plan_id, title, description, sort_order) VALUES
-    ('11111111-1111-1111-1111-111111111101', 'Consultas ilimitadas', 'Agende quantas consultas quiser com nossa rede médica.', 1),
-    ('11111111-1111-1111-1111-111111111101', 'Descontos em parceiros', 'Use a carteirinha Vita e economize em farmácias, clínicas e academias.', 2),
-    ('11111111-1111-1111-1111-111111111101', 'Sorteios exclusivos',   'Participe todo mês de prêmios reservados a assinantes.', 3),
-    ('11111111-1111-1111-1111-111111111101', 'Progressão de badges',  'Bronze, Prata, Ouro e Diamante — mais benefícios em cada nível.', 4),
-    ('11111111-1111-1111-1111-111111111101', 'Suporte prioritário',   'Fale direto com nossa equipe sem esperar na fila.', 5),
-    ('11111111-1111-1111-1111-111111111101', 'Cancelamento sem multa','Volte quando quiser, sem taxas de saída.', 6),
+    ('11111111-1111-1111-1111-111111111101', 'Descontos progressivos', 'Sua patente libera de 10% a 20% de desconto em consultas elegíveis.', 1),
+    ('11111111-1111-1111-1111-111111111101', 'Jornada de patentes', 'Bronze, Prata, Ouro e Diamante: cada mensalidade aprovada aproxima você do próximo nível.', 2),
+    ('11111111-1111-1111-1111-111111111101', 'Sorteios exclusivos', 'Ganhe participações anuais conforme sua patente.', 3),
+    ('11111111-1111-1111-1111-111111111101', 'Sem permanência mínima', 'Cancele quando quiser e preserve o progresso dos meses já pagos.', 4),
 
     ('11111111-1111-1111-1111-111111111102', 'Tudo do plano Mensal',  'Todos os benefícios do plano mensal inclusos.', 1),
     ('11111111-1111-1111-1111-111111111102', '30% de desconto',       'Economize R$ 30 ao pagar em 6 meses.', 2),

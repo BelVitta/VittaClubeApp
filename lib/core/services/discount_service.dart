@@ -1,10 +1,6 @@
-/// Servico que calcula descontos baseados no badge do usuario.
-///
-/// Tabela de descontos (spec):
-/// - Bronze: 10%
-/// - Prata: 15%
-/// - Ouro: 20%
-/// - Diamante: 30%
+import 'badge_catalog_service.dart';
+
+/// Serviço que calcula descontos publicados para a patente do usuário.
 class DiscountService {
   final double discountPercentage;
   final bool isEligibleForDiscount;
@@ -27,23 +23,9 @@ class DiscountService {
     return originalPrice * (discountPercentage / 100);
   }
 
-  /// Retorna o desconto padrao por nivel de badge
+  /// Retorna o desconto publicado pelo financeiro para a patente.
   static double getDefaultDiscount(String badgeLevel) {
-    switch (badgeLevel.toLowerCase()) {
-      case 'bronze':
-        return 10.0;
-      case 'silver':
-      case 'prata':
-        return 15.0;
-      case 'gold':
-      case 'ouro':
-        return 20.0;
-      case 'diamond':
-      case 'diamante':
-        return 30.0;
-      default:
-        return 0.0;
-    }
+    return BadgeCatalogService.discountFor(badgeLevel);
   }
 
   /// Formata o desconto como string

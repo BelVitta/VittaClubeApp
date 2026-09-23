@@ -238,7 +238,8 @@ class PaymentsPage extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => CancellationPage(
             subscriptionId: subscription.id,
-            pixStatus: subscription.pixStatus,
+            billingStatus: subscription.billingStatus,
+            provider: subscription.provider,
           ),
         ),
       ),

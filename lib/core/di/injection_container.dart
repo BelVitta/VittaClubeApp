@@ -3,10 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../config/supabase_config.dart';
-import '../payment/infinitypay/infinitypay_checkout_service.dart';
+import '../payment/mercadopago/mercadopago_card_tokenization_service.dart';
 import '../payment/payment_gateway.dart';
 import '../payment/mock_payment_gateway.dart';
 import '../services/clinic_settings_service.dart';
+import '../services/badge_catalog_service.dart';
 import '../services/push_notification_service.dart';
 
 import '../../features/auth/data/datasources/auth_datasource.dart';
@@ -277,6 +278,7 @@ import '../../features/subscription/domain/usecases/get_current_subscription_use
 import '../../features/subscription/domain/usecases/activate_subscription_usecase.dart';
 import '../../features/subscription/domain/usecases/cancel_subscription_usecase.dart';
 import '../../features/subscription/domain/usecases/create_pix_automatic_subscription_usecase.dart';
+import '../../features/subscription/domain/usecases/create_mercadopago_subscription_usecase.dart';
 import '../../features/subscription/domain/usecases/refresh_subscription_status_usecase.dart';
 import '../../features/subscription/presentation/bloc/subscription_bloc.dart';
 import '../../features/subscription/presentation/widgets/no_plan_promo_controller.dart';
@@ -316,13 +318,14 @@ Future<void> init() async {
     () => ClinicSettingsService(),
   );
 
-  sl.registerLazySingleton<InfinityPayCheckoutService>(
-    () => InfinityPayCheckoutService(
-      handle: AppConfig.instance.infinityPayHandle,
-    ),
-  );
+  sl.registerLazySingleton(() => MercadoPagoCardTokenizationService());
 
   sl.registerLazySingleton(() => PushNotificationService());
+
+  sl.registerLazySingleton(() => BadgeCatalogService());
+  if (SupabaseConfig.isInitialized) {
+    await sl<BadgeCatalogService>().load(SupabaseConfig.client);
+  }
 
   //============================================================
   // Features - Auth
@@ -725,6 +728,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => ActivateSubscriptionUseCase(sl()));
   sl.registerLazySingleton(() => CancelSubscriptionUseCase(sl()));
   sl.registerLazySingleton(() => CreatePixAutomaticSubscriptionUseCase(sl()));
+  sl.registerLazySingleton(() => CreateMercadoPagoSubscriptionUseCase(sl()));
   sl.registerLazySingleton(() => RefreshSubscriptionStatusUseCase(sl()));
 
   sl.registerLazySingleton<SubscriptionRepository>(
