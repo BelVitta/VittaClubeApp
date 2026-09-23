@@ -13,7 +13,7 @@ type RpcClient = {
   rpc: (
     fn: string,
     args?: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
 };
 
 /** Rate limit por JWT (tabela public.rate_limit_buckets). null = pode seguir. */

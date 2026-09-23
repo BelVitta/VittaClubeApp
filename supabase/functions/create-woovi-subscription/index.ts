@@ -67,6 +67,22 @@ Deno.serve(async (request) => {
   const limited = await enforceRateLimit(userClient, "create_woovi_subscription", 5);
   if (limited) return limited;
 
+  if (!body.planId) return errorResponse("planId é obrigatório.", 400);
+
+  const { data: plan, error: planError } = await serviceClient
+    .from("plans")
+    .select("id,subscription_type,price,is_active")
+    .eq("id", body.planId)
+    .maybeSingle();
+  if (planError) return errorResponse("Erro ao consultar o plano.", 500);
+  if (!plan || !plan.is_active || plan.subscription_type !== "mensal") {
+    return errorResponse("Este plano mensal não está disponível.", 409);
+  }
+  const valueCents = Math.round(Number(plan.price) * 100);
+  if (valueCents !== 3490) {
+    return errorResponse("O plano Pix precisa estar configurado em R$34,90.", 409);
+  }
+
   const userId = userData.user.id;
   let customer;
   try {
@@ -85,18 +101,24 @@ Deno.serve(async (request) => {
     return errorResponse(`Campo obrigatório ausente: customer.address.${missingAddressField}`, 400);
   }
 
-  const { data: existing, error: existingError } = await serviceClient
+  const { data: existingRows, error: existingError } = await serviceClient
     .from("subscriptions")
     .select("*")
     .eq("user_id", userId)
-    .eq("is_current", true)
     .in("status", ["active", "payment_pending", "waiting_authorization"])
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   if (existingError) {
     return errorResponse(`Erro ao consultar assinatura: ${existingError.message}`, 500);
   }
 
+  const existing = (existingRows ?? []).find((row) => {
+    const paidUntil = row.current_period_end
+      ? new Date(row.current_period_end).getTime()
+      : 0;
+    return row.status === "waiting_authorization" || paidUntil >= Date.now();
+  });
   if (existing) {
     if (existing.status === "waiting_authorization") {
       return jsonResponse({
@@ -118,7 +140,7 @@ Deno.serve(async (request) => {
     wooviResponse = await woovi.createSubscription({
       correlationID,
       type: "PIX_RECURRING",
-      value: env.valueCents,
+      value: valueCents,
       frequency: env.frequency,
       dayGenerateCharge,
       dayDue: dayGenerateCharge,
@@ -142,26 +164,36 @@ Deno.serve(async (request) => {
   const subscription = wooviResponse.subscription ?? wooviResponse;
   const paymentLinkUrl = subscription.paymentLinkUrl as string | undefined;
 
-  await serviceClient
+  const { error: retireError } = await serviceClient
     .from("subscriptions")
     .update({ is_current: false })
     .eq("user_id", userId)
     .eq("is_current", true);
+  if (retireError) {
+    try {
+      await woovi.cancelSubscription(subscription.id ?? subscription.globalID ?? correlationID);
+    } catch (_) {
+      // The response below remains generic; the remote cancellation is retried
+      // by reconciliation if the provider did not accept the compensation.
+    }
+    return errorResponse("Não foi possível preparar a assinatura local.", 500);
+  }
 
   const { data: inserted, error: insertError } = await serviceClient
     .from("subscriptions")
     .insert({
       user_id: userId,
-      plan_id: body.planId ?? "vittaclube-monthly",
+      plan_id: plan.id,
       badge_level: "bronze",
       plan_level_status: "bronze",
       is_current: true,
       status: "waiting_authorization",
       payment_access_status: "blocked",
+      payment_provider: "woovi",
       woovi_subscription_id: subscription.id ?? subscription.globalID ?? null,
       correlation_id: correlationID,
       payment_link_url: paymentLinkUrl,
-      value_cents: env.valueCents,
+      value_cents: valueCents,
       interval: env.frequency,
       journey: env.journey,
       retry_policy: env.retryPolicy,
@@ -182,6 +214,11 @@ Deno.serve(async (request) => {
     .single();
 
   if (insertError) {
+    try {
+      await woovi.cancelSubscription(subscription.id ?? subscription.globalID ?? correlationID);
+    } catch (_) {
+      // Keep the original error while reconciliation can detect the orphan.
+    }
     return errorResponse(`Erro ao persistir assinatura: ${insertError.message}`, 500);
   }
 

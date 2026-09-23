@@ -4,10 +4,12 @@ import 'package:vita_clube/features/subscription/domain/services/subscription_ac
 
 void main() {
   group('SubscriptionAccessPolicy', () {
-    test('allows full access only for active subscription', () {
-      const policy = SubscriptionAccessPolicy(
+    test('allows full access only for active subscription with paid period', () {
+      final policy = SubscriptionAccessPolicy(
         status: PixAutomaticSubscriptionStatus.active,
         accessStatus: PaymentAccessStatus.allowed,
+        currentPeriodEnd: DateTime(2026, 6, 10),
+        now: DateTime(2026, 6, 2),
       );
 
       expect(policy.canAccessBenefits, isTrue);
@@ -16,15 +18,36 @@ void main() {
     });
 
     test('keeps access during payment pending recovery with warning', () {
-      const policy = SubscriptionAccessPolicy(
+      final policy = SubscriptionAccessPolicy(
         status: PixAutomaticSubscriptionStatus.paymentPending,
         accessStatus: PaymentAccessStatus.warningPending,
+        currentPeriodEnd: DateTime(2026, 6, 10),
+        now: DateTime(2026, 6, 2),
       );
 
       expect(policy.canAccessBenefits, isTrue);
       expect(policy.canUseQr, isTrue);
       expect(policy.mustShowPendingWarning, isTrue);
       expect(policy.mustShowRestoreAccount, isFalse);
+    });
+
+    test('blocks active and pending access without a valid paid period', () {
+      for (final status in [
+        PixAutomaticSubscriptionStatus.active,
+        PixAutomaticSubscriptionStatus.paymentPending,
+      ]) {
+        final policy = SubscriptionAccessPolicy(
+          status: status,
+          accessStatus: status == PixAutomaticSubscriptionStatus.active
+              ? PaymentAccessStatus.allowed
+              : PaymentAccessStatus.warningPending,
+          currentPeriodEnd: DateTime(2026, 6, 1),
+          now: DateTime(2026, 6, 2),
+        );
+
+        expect(policy.canAccessBenefits, isFalse, reason: status.name);
+        expect(policy.canUseQr, isFalse, reason: status.name);
+      }
     });
 
     test('blocks access and QR for blocked, rejected, expired and waiting', () {
@@ -64,6 +87,17 @@ void main() {
       expect(allowed.canUseQr, isTrue);
       expect(expired.canAccessBenefits, isFalse);
       expect(expired.canUseQr, isFalse);
+    });
+
+    test('does not keep access for the whole calendar day after expiry', () {
+      final policy = SubscriptionAccessPolicy(
+        status: PixAutomaticSubscriptionStatus.cancelled,
+        accessStatus: PaymentAccessStatus.allowed,
+        currentPeriodEnd: DateTime(2026, 6, 2, 9),
+        now: DateTime(2026, 6, 2, 10),
+      );
+
+      expect(policy.canAccessBenefits, isFalse);
     });
   });
 }

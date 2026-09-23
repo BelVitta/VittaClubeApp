@@ -398,19 +398,13 @@ class ParceiroSupabaseDataSource implements ParceiroDataSource {
 
   @override
   Future<Map<String, dynamic>> confirmPartnerValidation({
-    required String holderUserId,
-    required String memberName,
-    String? dependentId,
+    required String validationId,
     double? originalValue,
-    String? planLevel,
   }) async {
     try {
       final result = await _supabase.rpc('confirm_partner_validation', params: {
-        'p_holder_user_id': holderUserId,
-        'p_member_name': memberName,
-        'p_dependent_id': dependentId,
+        'p_validation_id': validationId,
         'p_original_value': originalValue,
-        'p_plan_level': planLevel,
       });
       return Map<String, dynamic>.from(result as Map);
     } catch (e) {

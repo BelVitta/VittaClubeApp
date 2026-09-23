@@ -13,11 +13,8 @@ abstract class ParceiroDataSource {
   Future<PartnerModel> updatePartner(PartnerEntity entity);
   Future<PartnerModel> regenerateCode(String partnerId);
   Future<Map<String, dynamic>> confirmPartnerValidation({
-    required String holderUserId,
-    required String memberName,
-    String? dependentId,
+    required String validationId,
     double? originalValue,
-    String? planLevel,
   });
 
   // Partner Applications (candidaturas de "Seja Parceiro")

@@ -13,10 +13,7 @@ abstract class PartnerValidationRepository {
   });
   Future<Either<Failure, String>> generateToken(String userId);
   Future<Either<Failure, Map<String, dynamic>>> confirmValidation({
-    required String holderUserId,
-    required String memberName,
-    String? dependentId,
+    required String validationId,
     double? originalValue,
-    String? planLevel,
   });
 }

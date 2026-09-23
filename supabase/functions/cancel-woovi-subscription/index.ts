@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { enforceRateLimit, errorResponse, jsonResponse } from "../_shared/http.ts";
 import { WooviClient } from "../_shared/woovi/client.ts";
 import { getWooviEnv } from "../_shared/woovi/env.ts";
+import { hasBillingAdminRole } from "../_shared/mercadopago/auth.ts";
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") {
@@ -33,38 +34,46 @@ Deno.serve(async (request) => {
     .eq("id", subscriptionId)
     .maybeSingle();
   if (error || !subscription) return errorResponse("Assinatura não encontrada.", 404);
-  if (!canOperateSubscription(userData.user, subscription.user_id)) {
+  const isAdmin = await hasBillingAdminRole(userClient, userData.user.id);
+  if (userData.user.id !== subscription.user_id && !isAdmin) {
     return errorResponse("Sem permissão para cancelar esta assinatura.", 403);
   }
 
   const woovi = new WooviClient(getWooviEnv());
   await woovi.cancelSubscription(subscription.woovi_subscription_id ?? subscription.correlation_id);
 
-  await client
+  const now = new Date();
+  const hasPaidPeriod = !!subscription.current_period_end &&
+    new Date(subscription.current_period_end).getTime() > now.getTime();
+  const { error: updateError } = await client
     .from("subscriptions")
     .update({
       status: "cancelled",
-      cancelled_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      cancelled_at: now.toISOString(),
+      cancellation_reason_text: reason ?? null,
+      payment_access_status: hasPaidPeriod ? "allowed" : "blocked",
+      is_current: hasPaidPeriod,
+      updated_at: now.toISOString(),
     })
     .eq("id", subscriptionId);
+  if (updateError) return errorResponse("A recorrência foi cancelada, mas não foi possível atualizar o acesso local.", 500);
 
-  await client.from("subscription_access_events").insert({
+  const { error: auditError } = await client.from("subscription_access_events").insert({
     subscription_id: subscriptionId,
     user_id: subscription.user_id,
     from_status: subscription.status,
     to_status: "cancelled",
     from_access_status: subscription.payment_access_status,
-    to_access_status: subscription.payment_access_status,
+    to_access_status: hasPaidPeriod ? "allowed" : "blocked",
     reason: reason ?? "Cancelamento solicitado",
     source: "operator",
   });
+  if (auditError) return errorResponse("Cancelamento salvo, mas não foi possível registrar a auditoria.", 500);
 
-  return jsonResponse({ ok: true, subscriptionId, status: "cancelled" });
+  return jsonResponse({
+    ok: true,
+    subscriptionId,
+    status: "cancelled",
+    accessUntil: hasPaidPeriod ? subscription.current_period_end : null,
+  });
 });
-
-function canOperateSubscription(user: any, subscriptionUserId: string): boolean {
-  if (user.id === subscriptionUserId) return true;
-  const role = user.user_metadata?.role ?? user.app_metadata?.role;
-  return ["admin", "financeiro", "super_admin"].includes(role);
-}

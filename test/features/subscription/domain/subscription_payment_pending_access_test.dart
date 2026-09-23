@@ -3,10 +3,12 @@ import 'package:vita_clube/features/subscription/domain/entities/subscription_st
 import 'package:vita_clube/features/subscription/domain/services/subscription_access_policy.dart';
 
 void main() {
-  test('payment_pending keeps benefits and QR available with warning', () {
-    const policy = SubscriptionAccessPolicy(
+  test('payment_pending keeps benefits and QR available during paid period', () {
+    final policy = SubscriptionAccessPolicy(
       status: PixAutomaticSubscriptionStatus.paymentPending,
       accessStatus: PaymentAccessStatus.warningPending,
+      currentPeriodEnd: DateTime(2026, 6, 10),
+      now: DateTime(2026, 6, 2),
     );
 
     expect(policy.canAccessBenefits, isTrue);

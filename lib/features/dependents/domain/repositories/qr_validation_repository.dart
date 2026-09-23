@@ -34,6 +34,10 @@ class QrValidationResult {
   final String? discountSource;
   final String? partnerId;
 
+  /// Identificador curto e descartável emitido pelo servidor para confirmar
+  /// uma utilização no parceiro.
+  final String? validationId;
+
   const QrValidationResult({
     required this.decision,
     required this.message,
@@ -51,6 +55,7 @@ class QrValidationResult {
     this.cpfMasked,
     this.discountSource,
     this.partnerId,
+    this.validationId,
   });
 
   bool get isApproved => decision == QrValidationDecision.approved;

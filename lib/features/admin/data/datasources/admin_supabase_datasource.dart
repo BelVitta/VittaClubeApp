@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math';
-import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -304,6 +302,17 @@ class AdminSupabaseDataSource implements AdminDataSource {
           'sort_order': i,
         });
       }
+      if (plan.subscriptionType == 'mensal') {
+        final response = await _supabase.functions.invoke(
+          'create-mercadopago-plan',
+          body: {'planId': planId},
+        );
+        if (response.status < 200 || response.status >= 300) {
+          throw const ServerException(
+            message: 'Plano salvo, mas não foi publicado no Mercado Pago.',
+          );
+        }
+      }
       return getPlanById(planId);
     } catch (e) {
       throw ServerException(message: 'Erro ao criar plano: $e');
@@ -313,10 +322,30 @@ class AdminSupabaseDataSource implements AdminDataSource {
   @override
   Future<PlanAdminModel> updatePlan(PlanAdminEntity plan) async {
     try {
+      final current = await _supabase
+          .from('plans')
+          .select('price, subscription_type, mercadopago_preapproval_plan_id')
+          .eq('id', plan.id)
+          .single();
+      final oldPrice = (current['price'] as num).toDouble();
+      final hasProviderPlan =
+          (current['mercadopago_preapproval_plan_id'] as String?)?.isNotEmpty ??
+              false;
+      if (hasProviderPlan && oldPrice != plan.price) {
+        final response = await _supabase.functions.invoke(
+          'update-mercadopago-plan-price',
+          body: {'planId': plan.id, 'newPrice': plan.price},
+        );
+        if (response.status < 200 || response.status >= 300) {
+          throw const ServerException(
+            message: 'O reajuste não foi confirmado pelo Mercado Pago.',
+          );
+        }
+      }
       await _supabase.from('plans').update({
         'name': plan.name,
         'subscription_type': plan.subscriptionType,
-        'price': plan.price,
+        if (!hasProviderPlan || oldPrice == plan.price) 'price': plan.price,
         'discount_label': plan.discountLabel,
         'is_active': plan.isActive,
       }).eq('id', plan.id);
@@ -908,31 +937,7 @@ class AdminSupabaseDataSource implements AdminDataSource {
   @override
   Future<DrawModel> executeDraw(String drawId) async {
     try {
-      final participants = await _supabase
-          .from('draw_participants')
-          .select('user_id')
-          .eq('draw_id', drawId);
-      if ((participants as List).isEmpty) {
-        throw const ServerException(message: 'Sem participantes no sorteio.');
-      }
-      final random = Random.secure();
-      final winnerIndex = random.nextInt(participants.length);
-      final winnerId = participants[winnerIndex]['user_id'] as String;
-      final now = DateTime.now();
-      final seedHash = sha256
-          .convert(utf8.encode('${drawId}_${now.millisecondsSinceEpoch}'))
-          .toString();
-      final listHash =
-          sha256.convert(utf8.encode(participants.toString())).toString();
-      await _supabase.from('draws').update({
-        'status': 'realizado',
-        'winner_id': winnerId,
-        'winner_index': winnerIndex,
-        'draw_seed_hash': seedHash,
-        'participant_list_hash': listHash,
-        'executed_at': now.toIso8601String(),
-        'participant_count': participants.length,
-      }).eq('id', drawId);
+      await _supabase.rpc('execute_draw', params: {'p_draw_id': drawId});
       return getDrawById(drawId);
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -1155,7 +1160,7 @@ class AdminSupabaseDataSource implements AdminDataSource {
       final data = await _supabase
           .from('badges')
           .select(
-              'id, level_name, display_name, badge_image_url, progress_color, progress_bg_color, sort_order, discount_percentage, max_consultations_per_month')
+              'id, level_name, display_name, badge_image_url, progress_color, progress_bg_color, sort_order, discount_percentage, max_consultations_per_month, required_months, annual_draw_limit')
           .order('sort_order');
       return (data as List).map((e) => _badgeFromRow(e)).toList();
     } catch (e) {
@@ -1169,7 +1174,7 @@ class AdminSupabaseDataSource implements AdminDataSource {
       final data = await _supabase
           .from('badges')
           .select(
-              'id, level_name, display_name, badge_image_url, progress_color, progress_bg_color, sort_order, discount_percentage, max_consultations_per_month')
+              'id, level_name, display_name, badge_image_url, progress_color, progress_bg_color, sort_order, discount_percentage, max_consultations_per_month, required_months, annual_draw_limit')
           .eq('id', id)
           .single();
       return _badgeFromRow(data);
@@ -1192,6 +1197,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
             'sort_order': badge.sortOrder,
             'discount_percentage': badge.discountPercentage,
             'max_consultations_per_month': badge.maxConsultationsPerMonth,
+            'required_months': badge.requiredMonths,
+            'annual_draw_limit': badge.annualDrawLimit,
           })
           .select('id')
           .single();
@@ -1212,6 +1219,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
         'sort_order': badge.sortOrder,
         'discount_percentage': badge.discountPercentage,
         'max_consultations_per_month': badge.maxConsultationsPerMonth,
+        'required_months': badge.requiredMonths,
+        'annual_draw_limit': badge.annualDrawLimit,
       }).eq('id', badge.id);
       return getBadgeById(badge.id);
     } catch (e) {
@@ -1239,6 +1248,8 @@ class AdminSupabaseDataSource implements AdminDataSource {
       sortOrder: e['sort_order'] as int? ?? 0,
       discountPercentage: (e['discount_percentage'] as num?)?.toDouble() ?? 0,
       maxConsultationsPerMonth: e['max_consultations_per_month'] as int? ?? 0,
+      requiredMonths: e['required_months'] as int? ?? 0,
+      annualDrawLimit: e['annual_draw_limit'] as int? ?? 0,
     );
   }
 }

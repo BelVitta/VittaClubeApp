@@ -285,19 +285,16 @@ class _PartnerValidationSheetState extends State<_PartnerValidationSheet> {
   }
 
   Future<void> _confirm(QrValidationResult result) async {
-    final holderId = result.holderUserId;
-    if (holderId == null || _saving) return;
+    final validationId = result.validationId;
+    if (validationId == null || _saving) return;
     setState(() {
       _saving = true;
       _error = null;
     });
     final response = await sl<ConfirmPartnerValidationUseCase>()(
       ConfirmPartnerValidationParams(
-        holderUserId: holderId,
-        memberName: result.memberName ?? 'Membro',
-        dependentId: result.dependentId,
+        validationId: validationId,
         originalValue: _original > 0 ? _original : null,
-        planLevel: result.planLevel,
       ),
     );
     if (!mounted) return;

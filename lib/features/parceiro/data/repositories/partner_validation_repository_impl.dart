@@ -60,19 +60,13 @@ class PartnerValidationRepositoryImpl implements PartnerValidationRepository {
 
   @override
   Future<Either<Failure, Map<String, dynamic>>> confirmValidation({
-    required String holderUserId,
-    required String memberName,
-    String? dependentId,
+    required String validationId,
     double? originalValue,
-    String? planLevel,
   }) async {
     try {
       final result = await dataSource.confirmPartnerValidation(
-        holderUserId: holderUserId,
-        memberName: memberName,
-        dependentId: dependentId,
+        validationId: validationId,
         originalValue: originalValue,
-        planLevel: planLevel,
       );
       if (result['ok'] == false) {
         final msg = result['message']?.toString();

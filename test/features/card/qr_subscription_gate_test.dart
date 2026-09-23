@@ -158,6 +158,7 @@ SubscriptionEntity _subscription({required bool blocked}) {
     level: blocked ? PlanLevel.inadimplente : PlanLevel.bronze,
     activationDate: DateTime(2026, 6, 2),
     expirationDate: DateTime(2026, 7, 2),
+    currentPeriodEnd: DateTime(2099, 1, 1),
     isCurrent: true,
     pixStatus: blocked
         ? PixAutomaticSubscriptionStatus.blocked

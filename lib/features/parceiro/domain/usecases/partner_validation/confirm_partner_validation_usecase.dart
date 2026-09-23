@@ -4,18 +4,12 @@ import '../../../../../core/error/failures.dart';
 import '../../repositories/partner_validation_repository.dart';
 
 class ConfirmPartnerValidationParams {
-  final String holderUserId;
-  final String memberName;
-  final String? dependentId;
+  final String validationId;
   final double? originalValue;
-  final String? planLevel;
 
   const ConfirmPartnerValidationParams({
-    required this.holderUserId,
-    required this.memberName,
-    this.dependentId,
+    required this.validationId,
     this.originalValue,
-    this.planLevel,
   });
 }
 
@@ -28,11 +22,8 @@ class ConfirmPartnerValidationUseCase {
     ConfirmPartnerValidationParams params,
   ) {
     return repository.confirmValidation(
-      holderUserId: params.holderUserId,
-      memberName: params.memberName,
-      dependentId: params.dependentId,
+      validationId: params.validationId,
       originalValue: params.originalValue,
-      planLevel: params.planLevel,
     );
   }
 }

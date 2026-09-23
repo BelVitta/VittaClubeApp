@@ -120,15 +120,19 @@ async function processEvent(client: any, event: any) {
       await upsertAttempt(client, event, "rejected");
       return markPaymentPending(client, event);
     case "charge_completed":
-      await upsertCharge(client, event, "paid");
+      if (hasUnexpectedChargeValue(event)) {
+        await upsertCharge(client, event, "expired");
+        return updateSubscription(client, event, {
+          status: "blocked",
+          payment_access_status: "blocked",
+          blocked_at: new Date().toISOString(),
+        }, "Cobrança Pix com valor divergente.");
+      }
+      if (await upsertCharge(client, event, "paid")) return;
       return markChargeCompleted(client, event);
     case "charge_rejected":
       await upsertCharge(client, event, "expired");
-      return updateSubscription(client, event, {
-        status: "blocked",
-        payment_access_status: "blocked",
-        blocked_at: new Date().toISOString(),
-      }, "Cobrança expirada sem pagamento.");
+      return markPaymentPending(client, event);
     default:
       return;
   }
@@ -143,20 +147,65 @@ async function updateSubscription(
   if (!event.subscriptionCorrelationID) return;
   const { data: before } = await client
     .from("subscriptions")
-    .select("id,user_id,status,payment_access_status")
+    .select("id,user_id,status,payment_access_status,current_period_start,current_period_end,is_current")
     .eq("correlation_id", event.subscriptionCorrelationID)
     .maybeSingle();
 
   if (!before) return;
 
-  await client
-    .from("subscriptions")
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("correlation_id", event.subscriptionCorrelationID);
+  const now = new Date();
+  const currentPeriodEnd = before.current_period_end
+    ? new Date(before.current_period_end)
+    : null;
+  const hasPaidPeriod = !!currentPeriodEnd && currentPeriodEnd.getTime() > now.getTime();
+  const effectivePatch: Record<string, unknown> = { ...patch };
 
-  const toStatus = String(patch.status ?? before.status);
+  // A late creation/authorization notification must never roll a paid
+  // subscription back to a waiting state.
+  if (event.processedAs === "subscription_created" &&
+      ["active", "payment_pending", "cancelled"].includes(String(before.status)) &&
+      hasPaidPeriod) {
+    return;
+  }
+  if (event.processedAs === "subscription_authorized" &&
+      ["active", "payment_pending", "cancelled"].includes(String(before.status))) {
+    delete effectivePatch.status;
+    delete effectivePatch.payment_access_status;
+  }
+
+  // A rejection after a paid period is a renewal problem, not a first-time
+  // rejection. A first failed charge must remain blocked.
+  if (["subscription_rejected", "charge_try_rejected", "charge_rejected"].includes(event.processedAs)) {
+    if (hasPaidPeriod) {
+      effectivePatch.status = "payment_pending";
+      effectivePatch.payment_access_status = "warning_pending";
+      delete effectivePatch.blocked_at;
+    } else {
+      effectivePatch.status = event.processedAs === "subscription_rejected"
+        ? "rejected"
+        : "blocked";
+      effectivePatch.payment_access_status = "blocked";
+      effectivePatch.blocked_at = now.toISOString();
+    }
+  }
+
+  if (event.processedAs === "subscription_cancelled") {
+    effectivePatch.status = "cancelled";
+    effectivePatch.payment_access_status = hasPaidPeriod ? "allowed" : "blocked";
+    effectivePatch.is_current = hasPaidPeriod;
+  }
+
+  if (Object.keys(effectivePatch).length === 0) return;
+
+  const { error: updateError } = await client
+    .from("subscriptions")
+    .update({ ...effectivePatch, updated_at: now.toISOString() })
+    .eq("correlation_id", event.subscriptionCorrelationID);
+  if (updateError) throw updateError;
+
+  const toStatus = String(effectivePatch.status ?? before.status);
   const toAccessStatus = String(
-    patch.payment_access_status ?? before.payment_access_status,
+    effectivePatch.payment_access_status ?? before.payment_access_status,
   );
   const changed =
     before.status !== toStatus ||
@@ -164,7 +213,7 @@ async function updateSubscription(
 
   if (!changed) return;
 
-  await client.from("subscription_access_events").insert({
+  const { error: auditError } = await client.from("subscription_access_events").insert({
     subscription_id: before.id,
     user_id: before.user_id,
     from_status: before.status,
@@ -180,29 +229,44 @@ async function updateSubscription(
       charge_correlation_id: event.chargeCorrelationID,
     },
   });
+  if (auditError) throw auditError;
 }
 
-async function upsertCharge(client: any, event: any, status: string) {
-  if (!event.chargeCorrelationID || !event.subscriptionCorrelationID) return;
+async function upsertCharge(client: any, event: any, status: string): Promise<boolean> {
+  if (!event.chargeCorrelationID || !event.subscriptionCorrelationID) return false;
   const { data: subscription } = await client
     .from("subscriptions")
     .select("id,user_id")
     .eq("correlation_id", event.subscriptionCorrelationID)
     .maybeSingle();
-  if (!subscription) return;
+  if (!subscription) return false;
 
-  await client.from("subscription_charges").upsert({
+  const { data: existing, error: existingError } = await client
+    .from("subscription_charges")
+    .select("status")
+    .eq("correlation_id", event.chargeCorrelationID)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  // A late retry event cannot downgrade an already paid charge. Returning
+  // true tells the caller that no entitlement transition is needed.
+  if (existing?.status === "paid" && status !== "paid") return true;
+  if (existing?.status === "paid" && status === "paid") return true;
+
+  const paidAt = status === "paid" ? paymentDate(event) : null;
+  const { error } = await client.from("subscription_charges").upsert({
     subscription_id: subscription.id,
     user_id: subscription.user_id,
     correlation_id: event.chargeCorrelationID,
     subscription_correlation_id: event.subscriptionCorrelationID,
     value_cents: Number(event.charge?.value ?? 3490),
     status,
-    cycle_reference: new Date().toISOString().slice(0, 7),
-    paid_at: status === "paid" ? new Date().toISOString() : null,
+    cycle_reference: (paidAt ?? new Date()).toISOString().slice(0, 7),
+    paid_at: paidAt?.toISOString() ?? null,
     raw_latest_event: event.raw,
     updated_at: new Date().toISOString(),
   }, { onConflict: "correlation_id" });
+  if (error) throw error;
+  return false;
 }
 
 async function upsertAttempt(client: any, event: any, status: string) {
@@ -214,7 +278,7 @@ async function upsertAttempt(client: any, event: any, status: string) {
     .maybeSingle();
   if (!charge) return;
   const attemptNumber = Math.min((charge.attempt_count ?? 0) + 1, 3);
-  await client.from("subscription_charge_attempts").upsert({
+  const { error: attemptError } = await client.from("subscription_charge_attempts").upsert({
     subscription_charge_id: charge.id,
     attempt_number: attemptNumber,
     status,
@@ -222,30 +286,91 @@ async function upsertAttempt(client: any, event: any, status: string) {
     rejected_at: status === "rejected" ? new Date().toISOString() : null,
     raw_event: event.raw,
   }, { onConflict: "subscription_charge_id,attempt_number" });
-  await client
+  if (attemptError) throw attemptError;
+  const { error: chargeError } = await client
     .from("subscription_charges")
     .update({ attempt_count: attemptNumber, status: status === "rejected" ? "retrying" : "created" })
     .eq("id", charge.id);
+  if (chargeError) throw chargeError;
 }
 
 async function markPaymentPending(client: any, event: any) {
-  await updateSubscription(client, event, {
-    status: "payment_pending",
-    payment_access_status: "warning_pending",
-  }, "Primeira falha de cobrança; recuperação automática iniciada.");
+  if (event.chargeCorrelationID) {
+    const { data: charge, error } = await client
+      .from("subscription_charges")
+      .select("status")
+      .eq("correlation_id", event.chargeCorrelationID)
+      .maybeSingle();
+    if (error) throw error;
+    // A delayed rejection/attempt event must not downgrade a charge that was
+    // already confirmed as paid.
+    if (charge?.status === "paid") return;
+  }
+  await updateSubscription(client, event, {},
+    event.processedAs === "charge_rejected"
+      ? "Cobrança Pix expirada sem pagamento; período pago preservado quando vigente."
+      : "Tentativa de cobrança Pix recusada; recuperação automática iniciada.");
 }
 
 async function markChargeCompleted(client: any, event: any) {
+  const { data: before, error } = await client
+    .from("subscriptions")
+    .select("current_period_start,current_period_end,status")
+    .eq("correlation_id", event.subscriptionCorrelationID)
+    .maybeSingle();
+  if (error) throw error;
+  if (!before) return;
+
+  const paidAt = paymentDate(event) ?? new Date();
+  const previousStart = before.current_period_start
+    ? new Date(before.current_period_start)
+    : null;
+  // An approved event older than the period already applied is a late or
+  // duplicated notification and must not move entitlement backwards.
+  if (previousStart && paidAt.getTime() <= previousStart.getTime()) return;
+
+  const candidateEnd = nextMonthIso(paidAt);
+  const previousEnd = before.current_period_end
+    ? new Date(before.current_period_end)
+    : null;
+  const periodEnd = previousEnd && previousEnd.getTime() > Date.parse(candidateEnd)
+    ? previousEnd
+    : new Date(candidateEnd);
+
   await updateSubscription(client, event, {
     status: "active",
     payment_access_status: "allowed",
-    current_period_start: new Date().toISOString(),
-    current_period_end: nextMonthIso(new Date()),
-    next_billing_date: nextMonthIso(new Date()).slice(0, 10),
+    current_period_start: paidAt.toISOString(),
+    current_period_end: periodEnd.toISOString(),
+    next_billing_date: periodEnd.toISOString().slice(0, 10),
   }, "Cobrança Pix Automático confirmada.");
 }
 
 function nextMonthIso(date: Date): string {
   const next = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()));
   return next.toISOString();
+}
+
+function paymentDate(event: any): Date | null {
+  const charge = event.charge ?? {};
+  const raw = event.raw ?? {};
+  const candidates = [
+    charge.paidAt,
+    raw.paidAt,
+    raw.dateGenerateCharge,
+    charge.updatedAt,
+    charge.createdAt,
+    raw.createdAt,
+  ];
+  for (const value of candidates) {
+    if (!value) continue;
+    const date = new Date(String(value));
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return null;
+}
+
+function hasUnexpectedChargeValue(event: any): boolean {
+  const value = Number(event.charge?.value ?? event.raw?.value);
+  return Number.isFinite(value) && value !== 3490;
 }
